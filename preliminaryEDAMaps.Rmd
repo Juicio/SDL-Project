@@ -1,0 +1,173 @@
+```{r setup, include=FALSE}
+library(data.table)
+library(tidyverse)
+library(sf)
+library(tigris)
+
+options(scipen = 999, tigris_class = "sf", tigris_use_cache = TRUE)
+
+# 0. Set working directory if running in RStudio
+if (rstudioapi::isAvailable()) {
+  setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+}
+
+# 1. Download 2010 Spatial Boundaries (Douglas, Sarpy, Pottawattamie)
+ne_blocks <- block_groups(state = "NE", county = c("Douglas", "Sarpy"), year = 2010, cb = TRUE)
+ia_blocks <- block_groups(state = "IA", county = "Pottawattamie", year = 2010, cb = TRUE)
+
+omaha_metro_shapes <- rbind(ne_blocks, ia_blocks) %>%
+  mutate(GEOID = str_extract(GEO_ID, "\\d{12}$"))
+
+# 2. Fast CSV Read selecting key EPA SLD indicators
+sld_dt <- fread(
+  "EPA_SmartLocationDatabase_V3_Jan_2021_Final.csv",
+  select = c("STATEFP", "COUNTYFP", "TRACTCE", "BLKGRPCE", 
+             "D2A_JPHH", "D3A", "D4A", "NatWalkInd"),
+  colClasses = "character"
+)
+
+# Construct 12-digit GEOID and convert metric variables
+sld_dt[, GEOID := paste0(
+  str_pad(STATEFP, 2, "left", "0"),
+  str_pad(COUNTYFP, 3, "left", "0"),
+  str_pad(TRACTCE, 6, "left", "0"),
+  str_pad(BLKGRPCE, 1, "left", "0")
+)]
+
+numeric_cols <- c("D2A_JPHH", "D3A", "D4A", "NatWalkInd")
+sld_dt[, (numeric_cols) := lapply(.SD, as.numeric), .SDcols = numeric_cols]
+
+# 3. Spatial Inner Join
+mapped_sld <- omaha_metro_shapes %>%
+  inner_join(sld_dt, by = "GEOID")
+```
+
+```{r map-walkability, echo=FALSE, message=FALSE, warning=FALSE, fig.width=9, fig.height=6}
+# Map 1: National Walkability Index (Cividis Palette)
+ggplot(data = mapped_sld) +
+  geom_sf(aes(fill = NatWalkInd), color = "white", size = 0.05) +
+  scale_fill_viridis_c(
+    option = "cividis",
+    name = "Walk Index\n(1-20)",
+    na.value = "grey90"
+  ) +
+  coord_sf(
+    crs = 4326,
+    xlim = c(-96.35, -95.75),
+    ylim = c(41.00, 41.40)
+  ) +  
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "right"
+  ) +
+  labs(
+    title = "EPA National Walkability Index",
+    subtitle = "Composite score based on design, diversity, and transit access | Omaha Metro",
+    caption = "Source: US EPA SLD V3 (2021)"
+  )
+```
+
+```{r map-intersection-density, echo=FALSE, message=FALSE, warning=FALSE, fig.width=9, fig.height=6}
+# Map 2: Pedestrian Intersection Density (Viridis Palette)
+ggplot(data = mapped_sld) +
+  geom_sf(aes(fill = D3A), color = "white", size = 0.05) +
+  scale_fill_viridis_c(
+    option = "viridis",
+    name = "Intersection\nDensity (D3A)",
+    labels = scales::label_comma(),
+    na.value = "grey90"
+  ) +
+  coord_sf(
+    crs = 4326,
+    xlim = c(-96.35, -95.75),
+    ylim = c(41.00, 41.40)
+  ) +  
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "right"
+  ) +
+  labs(
+    title = "Pedestrian Street Grid Connectivity",
+    subtitle = "Pedestrian-oriented intersection density per sq. mile (D3A) | Omaha Metro",
+    caption = "Source: US EPA SLD V3 (2021)"
+  )
+```
+
+```{r map-jobs-housing, echo=FALSE, message=FALSE, warning=FALSE, fig.width=9, fig.height=6}
+# Map 3: Jobs-Housing Balance (Plasma Palette)
+ggplot(data = mapped_sld) +
+  geom_sf(aes(fill = D2A_JPHH), color = "white", size = 0.05) +
+  scale_fill_viridis_c(
+    option = "plasma",
+    trans = "log1p", # Smoothly handles zeros and logarithmic scaling
+    name = "Jobs/HH Ratio\n(Log Scale)",
+    breaks = c(0, 1, 5, 25, 100, 300),
+    labels = c("0", "1", "5", "25", "100", "300+"),
+    na.value = "grey90"
+  ) +
+  coord_sf(
+    crs = 4326,
+    xlim = c(-96.35, -95.75),
+    ylim = c(41.00, 41.40)
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "right"
+  ) +
+  labs(
+    title = "Employment & Housing Mix (D2A_JPHH)",
+    subtitle = "Jobs-to-housing ratio per block group (Log Transformed) | Omaha Metro Core",
+    caption = "Source: US EPA SLD V3 (2021)"
+  )
+
+
+```
+
+```{r map-transit-proximity, echo=FALSE, message=FALSE, warning=FALSE, fig.width=9, fig.height=6}
+# Map 4: Distance to Transit Stop (Magma Palette - Inverted so closer transit stands out)
+# Filter out sentinel values (D4A < 0) by setting them to NA
+mapped_sld_transit <- mapped_sld %>%
+  mutate(D4A_clean = ifelse(D4A < 0, NA, D4A))
+
+ggplot(data = mapped_sld_transit) +
+  geom_sf(aes(fill = D4A_clean), color = "white", size = 0.05) +
+  scale_fill_viridis_c(
+    option = "magma",
+    direction = -1, # Darker = closer to transit stop
+    name = "Distance to\nTransit (meters)",
+    labels = scales::label_comma(),
+    na.value = "grey90" # Unserviced / rural block groups shown in neutral light grey
+  ) +
+  coord_sf(
+    crs = 4326,
+    xlim = c(-96.35, -95.75),
+    ylim = c(41.00, 41.40)
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "right"
+  ) +
+  labs(
+    title = "Transit Service Accessibility (D4A)",
+    subtitle = "Distance to nearest transit stop (meters) | Omaha-Council Bluffs Metro Core",
+    caption = "Source: US EPA SLD V3 (2021) | Note: Grey indicates no GTFS transit coverage"
+  )
+
+
+```
