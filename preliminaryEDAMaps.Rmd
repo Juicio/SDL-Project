@@ -7,9 +7,9 @@ library(tigris)
 options(scipen = 999, tigris_class = "sf", tigris_use_cache = TRUE)
 
 # 0. Set working directory if running in RStudio
-if (rstudioapi::isAvailable()) {
-  setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-}
+#if (rstudioapi::isAvailable()) {
+#  setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+#}
 
 # 1. Download 2010 Spatial Boundaries (Douglas, Sarpy, Pottawattamie)
 ne_blocks <- block_groups(state = "NE", county = c("Douglas", "Sarpy"), year = 2010, cb = TRUE)
