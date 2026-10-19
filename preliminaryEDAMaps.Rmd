@@ -18,9 +18,9 @@ ia_blocks <- block_groups(state = "IA", county = "Pottawattamie", year = 2010, c
 omaha_metro_shapes <- rbind(ne_blocks, ia_blocks) %>%
   mutate(GEOID = str_extract(GEO_ID, "\\d{12}$"))
 
-# 2. Fast CSV Read selecting key EPA SLD indicators
+# 2. Read directly from the pre-filtered Omaha Core CSV
 sld_dt <- fread(
-  "EPA_SmartLocationDatabase_V3_Jan_2021_Final.csv",
+  "EPA_SmartLocationDatabase_Omaha_Core3.csv",
   select = c("STATEFP", "COUNTYFP", "TRACTCE", "BLKGRPCE", 
              "D2A_JPHH", "D3A", "D4A", "NatWalkInd"),
   colClasses = "character"
@@ -132,7 +132,6 @@ ggplot(data = mapped_sld) +
     caption = "Source: US EPA SLD V3 (2021)"
   )
 
-
 ```
 
 ```{r map-transit-proximity, echo=FALSE, message=FALSE, warning=FALSE, fig.width=9, fig.height=6}
@@ -168,6 +167,5 @@ ggplot(data = mapped_sld_transit) +
     subtitle = "Distance to nearest transit stop (meters) | Omaha-Council Bluffs Metro Core",
     caption = "Source: US EPA SLD V3 (2021) | Note: Grey indicates no GTFS transit coverage"
   )
-
 
 ```
