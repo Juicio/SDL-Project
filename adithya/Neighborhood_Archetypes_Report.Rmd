@@ -1,0 +1,146 @@
+---
+title: "Neighborhood Archetypes in the Omaha-Council Bluffs Study Area"
+author: "Adithya Kadavilla Shyaman"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      fig.width = 9, fig.height = 6)
+library(tidyverse)
+library(sf)
+library(tigris)
+library(scales)
+options(scipen = 999, tigris_use_cache = TRUE)
+```
+
+## Research question
+
+Can Omaha-Council Bluffs census block groups be organized into meaningful neighborhood archetypes based on density, land-use mix, street connectivity, transit access, and employment accessibility? After forming the archetypes, the analysis examines whether their shares of households without a vehicle differ.
+
+## Method
+
+The clustering uses six EPA Smart Location Database measures: population density (`D1B`), employment density (`D1C`), employment-household land-use mix (`D2A_EPHHM`), weighted street-intersection density (`D3B`), transit-access rank (`D4A_Ranked`), and relative automobile access to regional jobs (`D5CRI`). Skewed density measures are transformed with `log1p`, and all six features are standardized before K-means clustering.
+
+The raw distance-to-transit field (`D4A`) is not used because 365 block groups contain EPA's `-99999` code for no transit coverage. `D4A_Ranked` handles this explicitly by assigning unserved block groups a rank of 1. The zero-car household share (`Pct_AO0`) is excluded from clustering and used afterward as an external comparison measure.
+
+```{r load-results}
+assignments <- read_csv("adithya/results/cluster_assignments.csv",
+                        col_types = cols(GEOID10 = col_character(),
+                                         GEOID20 = col_character()))
+profiles <- read_csv("adithya/results/cluster_profiles.csv")
+model_selection <- read_csv("adithya/results/model_selection.csv")
+robustness <- read_csv("adithya/results/robustness_comparisons.csv")
+cluster_silhouette <- read_csv("adithya/results/cluster_silhouette_summary.csv")
+
+knitr::kable(profiles, digits = 3,
+             caption = "Average characteristics of the five neighborhood archetypes")
+```
+
+## Selecting five clusters
+
+Two clusters produce the largest silhouette score, but that solution only separates broadly urban and peripheral areas. The five-cluster solution retains a competitive silhouette score and reveals policy-relevant differences in residential character, mixed-use employment, and transit availability.
+
+```{r model-selection, echo=FALSE, out.width='95%'}
+knitr::include_graphics("adithya/results/model_selection.png")
+```
+
+## Archetype profiles
+
+```{r cluster-profile-figure, echo=FALSE, out.width='100%'}
+knitr::include_graphics("adithya/results/cluster_profiles_zscore.png")
+```
+
+The five archetypes are:
+
+1. **Transit-Poor Mixed-Use Areas:** moderate density and employment activity with strong land-use mix, but little nearby transit.
+2. **Transit-Served Residential Areas:** relatively dense residential areas with strong transit access, lower employment density, and lower land-use mix.
+3. **Low-Density Peripheral Areas:** very low population, employment, and intersection density with limited transit and weak regional job accessibility.
+4. **Auto-Oriented Residential Areas:** moderate-to-high residential density but low employment density, limited land-use mix, and little transit access.
+5. **Transit-Accessible Mixed-Use Centers:** high employment density, strong land-use mix, strong transit access, and high regional job accessibility.
+
+```{r pca-figure, echo=FALSE, out.width='90%'}
+knitr::include_graphics("adithya/results/pca_clusters.png")
+```
+
+## Relationship with vehicle availability
+
+```{r car-free-figure, echo=FALSE, out.width='95%'}
+knitr::include_graphics("adithya/results/zero_car_households_by_cluster.png")
+```
+
+```{r car-free-test}
+car_free_test <- kruskal.test(Pct_AO0 ~ Archetype, data = assignments)
+car_free_test
+```
+
+The transit-accessible mixed-use centers and transit-served residential areas have the largest average shares of zero-car households. The Kruskal-Wallis test evaluates whether the distributions differ across all five archetypes. This is an association, not a causal result.
+
+## Robustness checks
+
+The five-cluster result was tested four ways. The model was rerun from 50 random initializations, refitted to 100 independently selected 80% subsamples, compared with Ward hierarchical clustering, and refitted using five alternative feature specifications. Adjusted Rand Index (ARI) measures assignment agreement with the base solution while allowing cluster numbers to be permuted. Values near 1 indicate nearly identical assignments.
+
+```{r robustness-tables}
+knitr::kable(
+  robustness %>% mutate(across(c(Silhouette_score, ARI_vs_base), ~round(.x, 3))),
+  caption = "Algorithm and feature-sensitivity checks"
+)
+
+knitr::kable(
+  cluster_silhouette %>%
+    mutate(across(c(Mean_silhouette, Median_silhouette,
+                    Negative_silhouette_share), ~round(.x, 3))),
+  caption = "Separation quality for each archetype"
+)
+```
+
+```{r robustness-figure, echo=FALSE, out.width='100%'}
+knitr::include_graphics("adithya/results/robustness_validation.png")
+```
+
+Consistency across random starts and subsamples shows whether the solution depends on initialization or a small set of observations. Agreement with hierarchical clustering evaluates whether a different clustering method finds a similar structure. Feature-sensitivity results show how much the substantive definition of a neighborhood changes the assignments.
+
+## Map of neighborhood archetypes
+
+The repository subset contains all block groups in Douglas, Sarpy, and Pottawattamie Counties. Therefore, this map represents the three-county study area rather than official Omaha and Council Bluffs city boundaries.
+
+```{r map-clusters, cache=TRUE}
+ne_shapes <- block_groups(state = "NE", county = c("Douglas", "Sarpy"),
+                          year = 2019, cb = TRUE)
+ia_shapes <- block_groups(state = "IA", county = "Pottawattamie",
+                          year = 2019, cb = TRUE)
+
+study_area_shapes <- bind_rows(ne_shapes, ia_shapes) %>%
+  transmute(GEOID20 = as.character(GEOID), geometry)
+
+mapped_clusters <- study_area_shapes %>%
+  inner_join(assignments %>% select(GEOID20, Archetype), by = "GEOID20")
+
+ggplot(mapped_clusters) +
+  geom_sf(aes(fill = Archetype), color = "white", linewidth = 0.05) +
+  scale_fill_brewer(palette = "Set2", name = "Neighborhood archetype") +
+  coord_sf(crs = 4326, xlim = c(-96.35, -95.75), ylim = c(41.00, 41.40)) +
+  labs(title = "Neighborhood Archetypes in the Omaha-Council Bluffs Study Area",
+       subtitle = "K-means clustering of EPA Smart Location Database measures",
+       caption = "Source: U.S. EPA Smart Location Database Version 3.0 (2021)") +
+  theme_void() +
+  theme(plot.title = element_text(face = "bold"),
+        legend.position = "right")
+```
+
+## Limitations
+
+The SLD combines source data from several years, generally 2017-2020, so the archetypes describe built-environment conditions around that period rather than current conditions. K-means assumes compact clusters and is sensitive to feature selection. Transit measures also depend on the availability and completeness of GTFS feeds. Finally, county-based filtering includes places outside the Omaha and Council Bluffs municipal boundaries.
+
+## Reproduction
+
+From the repository root, run:
+
+```bash
+python adithya/neighborhood_clustering.py
+```
+
+Then knit this R Markdown file. The Python script regenerates every table and figure used above.
