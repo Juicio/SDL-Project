@@ -10,6 +10,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
                       fig.width = 9, fig.height = 6)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
 library(tidyverse)
 library(sf)
 library(tigris)
@@ -29,7 +30,8 @@ The raw distance-to-transit field (`D4A`) is not used because 365 block groups c
 
 ```{r load-results}
 assignments <- read_csv("adithya/results/cluster_assignments.csv",
-                        col_types = cols(GEOID10 = col_character(),
+                        col_types = cols(GEOID = col_character(),
+                                         GEOID10 = col_character(),
                                          GEOID20 = col_character()))
 profiles <- read_csv("adithya/results/cluster_profiles.csv")
 model_selection <- read_csv("adithya/results/model_selection.csv")
@@ -114,10 +116,12 @@ ia_shapes <- block_groups(state = "IA", county = "Pottawattamie",
                           year = 2019, cb = TRUE)
 
 study_area_shapes <- bind_rows(ne_shapes, ia_shapes) %>%
-  transmute(GEOID20 = as.character(GEOID), geometry)
+  transmute(GEOID = as.character(GEOID), geometry)
 
 mapped_clusters <- study_area_shapes %>%
-  inner_join(assignments %>% select(GEOID20, Archetype), by = "GEOID20")
+  inner_join(assignments %>% select(GEOID, Archetype), by = "GEOID")
+
+stopifnot(nrow(mapped_clusters) == nrow(assignments))
 
 ggplot(mapped_clusters) +
   geom_sf(aes(fill = Archetype), color = "white", linewidth = 0.05) +

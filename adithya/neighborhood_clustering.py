@@ -183,6 +183,18 @@ def main() -> None:
     if data.shape[0] != 727:
         raise ValueError(f"Expected 727 block groups, found {data.shape[0]}.")
 
+    # The county-subset CSV was exported with its original GEOID fields
+    # rounded to county-level values. Reconstruct the 12-digit census block-
+    # group identifier from the component fields so map joins remain valid.
+    data["GEOID"] = (
+        data["STATEFP"].astype(int).astype(str).str.zfill(2)
+        + data["COUNTYFP"].astype(int).astype(str).str.zfill(3)
+        + data["TRACTCE"].astype(int).astype(str).str.zfill(6)
+        + data["BLKGRPCE"].astype(int).astype(str).str.zfill(1)
+    )
+    if data["GEOID"].nunique() != data.shape[0]:
+        raise ValueError("Reconstructed census block-group GEOIDs are not unique.")
+
     features = build_features(data)
     if not np.isfinite(features.to_numpy()).all():
         raise ValueError("Clustering features contain missing or non-finite values.")
