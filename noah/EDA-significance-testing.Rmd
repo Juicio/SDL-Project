@@ -1,0 +1,209 @@
+---
+title: "EDA significance"
+output: html_document
+date: "2026-10-30"
+
+
+---
+title: "Built Environment & Transit Equity: Omaha vs. Council Bluffs"
+output:
+  html_document: default
+  word_document: default
+date: "2026-10-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  warning = FALSE, 
+  message = FALSE, 
+  fig.align = "center"
+)
+
+library(tigris)
+library(sf)
+library(tidyverse)
+library(data.table)
+library(rstatix)
+library(knitr)
+library(moments)
+library(patchwork)
+library(effsize)
+
+options(scipen = 999, tigris_class = "sf", tigris_use_cache = TRUE)
+```
+
+```{r}
+# 1. Load Census 2010 boundaries
+ne_blocks <- block_groups(state = "NE", county = c("Douglas", "Sarpy"), year = 2010, cb = TRUE)
+ia_blocks <- block_groups(state = "IA", county = "Pottawattamie", year = 2010, cb = TRUE)
+
+metro_shapes <- rbind(ne_blocks, ia_blocks) %>%
+  mutate(GEOID12 = str_extract(as.character(GEO_ID), "\\d{12}$"))
+
+# 2. Ingest and prepare EPA Smart Location Database
+sld_omaha <- fread("EPA_SDL_OmahaCouncilBluffs.csv")
+
+# Derive Pct_ZeroCar
+if (all(c("AutoOwn0", "TotHH") %in% names(sld_omaha))) {
+  sld_omaha[, `:=`(AutoOwn0 = as.numeric(AutoOwn0), TotHH = as.numeric(TotHH))]
+  sld_omaha[, Pct_ZeroCar := fifelse(TotHH > 0, (AutoOwn0 / TotHH) * 100, NA_real_)]
+} else if ("D1D" %in% names(sld_omaha)) {
+  sld_omaha[, Pct_ZeroCar := as.numeric(D1D)]
+}
+
+# 7-Indicator analysis vector
+analysis_vars <- c("NatWalkInd", "D1A", "D2A_JPHH", "D3A", "D5AR", "D5CR", "Pct_ZeroCar")
+
+# Reconstruct 12-digit FIPS to circumvent Excel integer truncation
+clean_data <- sld_omaha %>%
+  mutate(
+    jurisdiction = if_else(as.character(STATEFP) == "19", "Council Bluffs (IA)", "Omaha (NE)"),
+    GEOID12 = paste0(
+      str_pad(as.character(STATEFP),  width = 2, side = "left", pad = "0"),
+      str_pad(as.character(COUNTYFP), width = 3, side = "left", pad = "0"),
+      str_pad(as.character(TRACTCE),  width = 6, side = "left", pad = "0"),
+      str_pad(as.character(BLKGRPCE), width = 1, side = "left", pad = "0")
+    )
+  ) %>%
+  mutate(across(any_of(analysis_vars), as.numeric))
+
+# Spatial merge
+metro_map_sf <- metro_shapes %>%
+  inner_join(clean_data, by = "GEOID12")
+```
+
+```{r}
+# Mann-Whitney U test with Bonferroni correction
+comparison_results <- clean_data %>%
+  select(jurisdiction, all_of(analysis_vars)) %>%
+  pivot_longer(cols = all_of(analysis_vars), names_to = "indicator", values_to = "value") %>%
+  filter(!is.na(value)) %>%
+  group_by(indicator) %>%
+  rstatix::wilcox_test(value ~ jurisdiction) %>%
+  rstatix::adjust_pvalue(method = "bonferroni") %>%
+  rstatix::add_significance("p.adj")
+
+# Cliff's Delta effect size and 95% Confidence Intervals
+effect_sizes <- clean_data %>%
+  select(jurisdiction, all_of(analysis_vars)) %>%
+  pivot_longer(cols = all_of(analysis_vars), names_to = "indicator", values_to = "value") %>%
+  filter(!is.na(value)) %>%
+  group_by(indicator) %>%
+  summarise(
+    res = list(effsize::cliff.delta(value ~ jurisdiction, conf.level = 0.95)),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    effsize   = map_dbl(res, ~ round(.x$estimate, 3)),
+    conf.low  = map_dbl(res, ~ round(.x$conf.int[1], 3)),
+    conf.high = map_dbl(res, ~ round(.x$conf.int[2], 3)),
+    magnitude = map_chr(res, ~ as.character(.x$magnitude))
+  ) %>%
+  select(indicator, effsize, conf.low, conf.high, magnitude)
+
+# Summary table
+full_5d_table <- left_join(comparison_results, effect_sizes, by = "indicator") %>%
+  mutate(
+    Dimension = case_when(
+      indicator == "NatWalkInd"  ~ "Composite Walkability Index",
+      indicator == "D1A"         ~ "D1: Activity Density (Pop+Jobs/Acre)",
+      indicator == "D2A_JPHH"    ~ "D2: Diversity (Jobs/HH Ratio)",
+      indicator == "D3A"         ~ "D3: Design (Intersection Density)",
+      indicator == "D5AR"        ~ "D5: Auto Dest. Accessibility (45m Jobs)",
+      indicator == "D5CR"        ~ "D5: Transit Dest. Accessibility (45m Jobs)",
+      indicator == "Pct_ZeroCar" ~ "Auto: Zero-Vehicle Households (%)",
+      TRUE                       ~ indicator
+    ),
+    p.adj_formatted = if_else(p.adj < 0.0001, "< 0.0001", as.character(round(p.adj, 4))),
+    statistic = round(statistic, 0),
+    CI_95 = paste0("[", conf.low, ", ", conf.high, "]")
+  ) %>%
+  select(
+    Dimension,
+    `n (CB)` = n1,
+    `n (OMA)` = n2,
+    `W Statistic` = statistic,
+    `Bonferroni p` = p.adj_formatted,
+    `Sig.` = p.adj.signif,
+    `Cliff's Delta` = effsize,
+    `95% CI` = CI_95,
+    Magnitude = magnitude
+  )
+
+kable(full_5d_table, caption = "Built Environment & Transit Differences: Omaha vs. Council Bluffs", align = "lcccccccl")
+```
+
+
+
+To determine if transit equity and access differ across state lines, we compared the EPA 5D's and household vehicle access between Council bluffs and Omaha. Analysis showed a non normal distribution with all included variables having high skew and kurtosis. As a result two-tailed Mann-Whitney U tests were used to determine differences between the Omaha (n = ) and Council bluffs (n = ) metro. Cliffs delta was used to estimate effect sizes. To protect against type I error a bonferonni correction was used on the seven planned tests. 
+ Composite Walkability Index (NatWalkInd): Omaha and council bluffs were significantly different  (W=12,661, p_"adj" <0.0001, δ=-0.571) such that Omaha had significantly higher walkability. 
+Activity Density (D1A):  Omaha had significantly greater population and job density (W=20,586, p_"adj" <0.0001, δ=-0.302) compared to council bluffs.
+D3: Street Intersection Density (D3A): Significant (W=21,982, p_"adj" =0.0005, δ=-0.254) such that Omaha has denser intersections.
+D5: Auto Destination Accessibility (D5AR): Significant (W=10,294, p_"adj" <0.0001, δ=-0.651, large effect) such that Omaha has a greater number of jobs accessed by motor vehicle.
+D5: Transit Destination Accessibility (D5CR): Significant (W=10,294, p_"adj" <0.0001, δ=-0.651, large effect) such that Omaha had a greater number of jobs accessible via public transit.  
+Zero-Vehicle Households (Pct_ZeroCar): Significant (W=20,045, p_"adj" <0.0001, δ=-0.320) such that Omaha had a greater proportion of households with 0 cars.  
+
+
+
+```{r}
+equity_sf <- metro_map_sf %>%
+  filter(!is.na(Pct_ZeroCar) & !is.na(D5CR)) %>%
+  mutate(
+    need_cat   = ntile(Pct_ZeroCar, 3),
+    access_cat = ntile(rank(D5CR, ties.method = "min"), 3),
+    group      = paste0(need_cat, "-", access_cat)
+  )
+
+bivariate_colors <- c(
+  "1-1" = "#e8e8e8", "1-2" = "#b0d5df", "1-3" = "#64acbe",
+  "2-1" = "#e4acac", "2-2" = "#ad9ea5", "2-3" = "#627f8c",
+  "3-1" = "#c85a5a", "3-2" = "#985356", "3-3" = "#564249"
+)
+
+ne_outline <- metro_map_sf %>% filter(jurisdiction == "Omaha (NE)") %>% st_union()
+ia_outline <- metro_map_sf %>% filter(jurisdiction == "Council Bluffs (IA)") %>% st_union()
+river_border_line <- st_intersection(st_boundary(ne_outline), st_boundary(ia_outline)) %>%
+  st_collection_extract("LINESTRING")
+
+p_map <- ggplot(equity_sf) +
+  geom_sf(aes(fill = group), color = "grey85", linewidth = 0.05) +
+  geom_sf(data = river_border_line, color = "grey20", linewidth = 0.5) +
+  scale_fill_manual(values = bivariate_colors, guide = "none") +
+  coord_sf(
+    xlim = c(-96.16, -95.78),
+    ylim = c(41.13, 41.36),
+    expand = FALSE
+  ) +
+  theme_void() +
+  labs(
+    title = "Transit Equity Mismatch: Omaha Metro vs. Council Bluffs",
+    subtitle = "Dark Red = High Zero-Car / Low Transit Job Reach"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 13),
+    plot.subtitle = element_text(size = 9, color = "grey30", margin = margin(b = 8))
+  )
+
+legend_df <- expand.grid(need = 1:3, access = 1:3) %>%
+  mutate(group = paste0(need, "-", access))
+
+p_legend <- ggplot(legend_df, aes(x = access, y = need, fill = group)) +
+  geom_tile(color = "white", linewidth = 0.6) +
+  scale_fill_manual(values = bivariate_colors, guide = "none") +
+  scale_x_continuous(breaks = 1:3, labels = c("Low", "Med", "High")) +
+  scale_y_continuous(breaks = 1:3, labels = c("Low", "Med", "High")) +
+  coord_fixed() +
+  labs(x = "Transit Access (D5CR) →", y = "Zero-Car HHs (%) →") +
+  theme_minimal(base_size = 8) +
+  theme(
+    axis.title = element_text(size = 7, face = "bold"),
+    axis.text = element_text(size = 6),
+    panel.grid = element_blank()
+  )
+
+p_map + p_legend + plot_layout(widths = c(3.5, 1))
+
+```
+
+
