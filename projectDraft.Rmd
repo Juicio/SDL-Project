@@ -1,0 +1,93 @@
+---
+title: "Project Title: Subtitle Describing the Main Objective"
+author: "Juicio Brennan  •  Abhijith Patlori  •  Noah Pierson  •  Adithya K. Shyaman"
+date: "`r Sys.Date()`"
+header-includes:
+  - \usepackage{titling}
+  - \pretitle{\begin{center}\LARGE\bfseries}
+  - \posttitle{\end{center}\vskip 0.5em}
+  - \preauthor{\begin{center}\large}
+  - \postauthor{\end{center}\vskip 0.5em}
+  - \predate{\begin{center}\large}
+  - \postdate{\end{center}}
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    theme: flatly
+    df_print: paged
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+abstract: |
+  This project investigates [insert core problem/dataset] using exploratory data analysis and statistical modeling techniques. Using data sourced from [insert source], we apply [insert key methods] to evaluate [insert main hypothesis/research question]. Our primary findings demonstrate that [insert key quantitative result]. These results suggest [insert broader implication for data science/domain].
+---
+
+<style>
+.title, .author, .date {
+  text-align: center;
+}
+</style>
+
+```{r setup, include=FALSE}
+# Global chunk setup for consistent output and reproducible figures
+knitr::opts_chunk$set(
+  echo = TRUE,          # Show code chunks by default
+  warning = FALSE,      # Suppress warnings in final report
+  message = FALSE,      # Suppress library loading messages
+  fig.align = "center", # Center all plots
+  fig.width = 7,        # Standard plot width
+  fig.height = 4.5       # Standard plot height
+)
+
+# Load core packages required for the project
+library(tidyverse)
+library(knitr)
+```
+
+# Introduction
+
+Start with motivation that triggers interest
+
+Do some literature review, provide reference if anybody did related work
+
+Describe the problem and its importance
+
+Provide a summary of what the following section will discuss and how they touch the problem
+
+# Smart Location Database
+
+Exact source of data (should give link)
+
+Variables in the data
+
+What was the primary aim of data collection
+
+How is this data useful for your current analysis
+
+How did you clean and prepare the data
+
+# Methods
+
+General description
+
+## Method Subsection
+
+Content
+
+# Results and Findings
+
+Depending on what we do, we might not need this section. We can consider just having a conclusion.
+
+# Conclusion
+
+Should explain the entire report
+The abstract should be a one paragraph summary of this section.
+The title should be a one sentence summary of the abstract.
+
+# Future Work
+
+"Be very specific"
+Include both how and why
