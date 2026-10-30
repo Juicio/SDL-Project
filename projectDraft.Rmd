@@ -77,9 +77,9 @@ General description
 
 Content
 
-# Results and Findings
+# Results
 
-Depending on what we do, we might not need this section. We can consider just having a conclusion.
+Content
 
 # Conclusion
 
