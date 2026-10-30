@@ -10,6 +10,8 @@ header-includes:
   - \postauthor{\end{center}\vskip 0.5em}
   - \predate{\begin{center}\large}
   - \postdate{\end{center}}
+bibliography: references.bib
+csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa.csl
 output:
   html_document:
     toc: true
@@ -52,6 +54,8 @@ library(knitr)
 Start with motivation that triggers interest
 
 Do some literature review, provide reference if anybody did related work
+Reference example:
+Data transformation was conducted using the Tidyverse package [@wickham2019welcome].
 
 Describe the problem and its importance
 
@@ -91,3 +95,5 @@ The title should be a one sentence summary of the abstract.
 
 "Be very specific"
 Include both how and why
+
+# References
