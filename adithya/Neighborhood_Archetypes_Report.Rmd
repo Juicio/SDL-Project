@@ -18,13 +18,15 @@ library(scales)
 options(scipen = 999, tigris_use_cache = TRUE)
 ```
 
-## Research question
+## Research Question
 
 Can Omaha-Council Bluffs census block groups be organized into meaningful neighborhood archetypes based on density, land-use mix, street connectivity, transit access, and employment accessibility? After forming the archetypes, the analysis examines whether their shares of households without a vehicle differ.
 
-## Method
+## Methods
 
-The clustering uses six EPA Smart Location Database measures: population density (`D1B`), employment density (`D1C`), employment-household land-use mix (`D2A_EPHHM`), weighted street-intersection density (`D3B`), transit-access rank (`D4A_Ranked`), and relative automobile access to regional jobs (`D5CRI`). Skewed density measures are transformed with `log1p`, and all six features are standardized before K-means clustering.
+### Neighborhood archetype analysis
+
+The purpose of the clustering analysis is to reduce many neighborhood characteristics into a small set of recognizable neighborhood types. The clustering uses six EPA Smart Location Database measures: population density (`D1B`), employment density (`D1C`), employment-household land-use mix (`D2A_EPHHM`), weighted street-intersection density (`D3B`), transit-access rank (`D4A_Ranked`), and relative automobile access to regional jobs (`D5CRI`). Skewed density measures are transformed with `log1p`, and all six features are standardized so that variables measured on different scales contribute comparably to the model.
 
 The raw distance-to-transit field (`D4A`) is not used because 365 block groups contain EPA's `-99999` code for no transit coverage. `D4A_Ranked` handles this explicitly by assigning unserved block groups a rank of 1. The zero-car household share (`Pct_AO0`) is excluded from clustering and used afterward as an external comparison measure.
 
@@ -42,15 +44,27 @@ knitr::kable(profiles, digits = 3,
              caption = "Average characteristics of the five neighborhood archetypes")
 ```
 
-## Selecting five clusters
+### Model selection and validation
 
-Two clusters produce the largest silhouette score, but that solution only separates broadly urban and peripheral areas. The five-cluster solution retains a competitive silhouette score and reveals policy-relevant differences in residential character, mixed-use employment, and transit availability.
+K-means solutions containing two through eight clusters were compared using within-cluster variation and silhouette scores. Although the two-cluster solution produced the highest silhouette score, it separated the study area only into broadly urban and peripheral groups. The five-cluster solution retained a competitive silhouette score while distinguishing policy-relevant differences in residential character, mixed-use employment, transit availability, and job accessibility.
 
 ```{r model-selection, echo=FALSE, out.width='95%'}
 knitr::include_graphics("adithya/results/model_selection.png")
 ```
 
-## Archetype profiles
+The stability of the selected solution was evaluated through 50 random initializations, 100 refits using independently selected 80% subsamples, comparison with Ward hierarchical clustering, and five alternative feature specifications. Adjusted Rand Index (ARI) was used to measure agreement with the selected solution after accounting for possible changes in cluster labels.
+
+### External comparison and geographic mapping
+
+The share of households without a vehicle was deliberately excluded from the clustering inputs. After the archetypes were created, this measure was compared across the five groups using descriptive averages and a Kruskal-Wallis test. This design allows vehicle availability to serve as an external comparison rather than helping define the clusters themselves. The test evaluates association and does not establish that neighborhood form causes households to own fewer vehicles.
+
+Cluster assignments were joined to 2019 Census block-group boundaries for Douglas and Sarpy Counties in Nebraska and Pottawattamie County in Iowa. The resulting map covers the complete three-county study area, including areas outside the official Omaha and Council Bluffs city boundaries.
+
+## Results
+
+### Five neighborhood archetypes
+
+The analysis identified five neighborhood archetypes that describe distinct combinations of density, land use, street design, transit access, and access to regional employment. These archetypes make the 727 block groups easier to interpret than reviewing each of the six measures independently.
 
 ```{r cluster-profile-figure, echo=FALSE, out.width='100%'}
 knitr::include_graphics("adithya/results/cluster_profiles_zscore.png")
@@ -64,11 +78,15 @@ The five archetypes are:
 4. **Auto-Oriented Residential Areas:** moderate-to-high residential density but low employment density, limited land-use mix, and little transit access.
 5. **Transit-Accessible Mixed-Use Centers:** high employment density, strong land-use mix, strong transit access, and high regional job accessibility.
 
+This classification is useful because the same transportation strategy is unlikely to fit every part of the metropolitan area. Low-density peripheral areas face structural distance and density constraints, while transit-poor mixed-use areas already contain destinations and mixed land uses but lack comparable transit access. Transit-accessible centers can serve as examples of the combination of development and transportation conditions associated with lower vehicle availability.
+
 ```{r pca-figure, echo=FALSE, out.width='90%'}
 knitr::include_graphics("adithya/results/pca_clusters.png")
 ```
 
-## Relationship with vehicle availability
+The profile and PCA figures show that the largest distinctions are not simply between Nebraska and Iowa. Instead, the study area contains several recurring neighborhood forms that cross jurisdictional boundaries. This supports planning based on neighborhood conditions rather than relying only on city or county averages.
+
+### Relationship with vehicle availability and urban equity
 
 ```{r car-free-figure, echo=FALSE, out.width='95%'}
 knitr::include_graphics("adithya/results/zero_car_households_by_cluster.png")
@@ -79,9 +97,13 @@ car_free_test <- kruskal.test(Pct_AO0 ~ Archetype, data = assignments)
 car_free_test
 ```
 
-The transit-accessible mixed-use centers and transit-served residential areas have the largest average shares of zero-car households. The Kruskal-Wallis test evaluates whether the distributions differ across all five archetypes. This is an association, not a causal result.
+Vehicle availability differs meaningfully across the five neighborhood archetypes. Transit-accessible mixed-use centers have the largest average share of households without a vehicle at approximately 9.7%, followed by transit-served residential areas at approximately 8.3%. By comparison, the averages are approximately 4.8% in transit-poor mixed-use areas, 3.2% in auto-oriented residential areas, and 2.8% in low-density peripheral areas.
 
-## Robustness checks
+The most important result is that households without vehicles are more concentrated in the two archetypes with strong transit access. The formal comparison confirms that the distributions are not alike across all five groups, although the archetypes explain only part of the variation in vehicle availability. This is consistent with an urban-equity concern: residents who do not own vehicles depend more heavily on the accessibility provided by neighborhood design and transit service.
+
+For city planners, the archetypes offer a practical screening tool. Transit-poor mixed-use areas may be strong candidates for improved transit connections because they already contain a mix of housing and employment but have weak transit access. Auto-oriented residential and peripheral areas may require different strategies, such as feeder service, safer pedestrian connections, or carefully targeted mixed-use development. Transit-accessible mixed-use centers should be protected from service reductions because they contain the highest concentration of households without vehicles.
+
+### Reliability of the neighborhood groups
 
 The five-cluster result was tested four ways. The model was rerun from 50 random initializations, refitted to 100 independently selected 80% subsamples, compared with Ward hierarchical clustering, and refitted using five alternative feature specifications. Adjusted Rand Index (ARI) measures assignment agreement with the base solution while allowing cluster numbers to be permuted. Values near 1 indicate nearly identical assignments.
 
@@ -103,11 +125,11 @@ knitr::kable(
 knitr::include_graphics("adithya/results/robustness_validation.png")
 ```
 
-Consistency across random starts and subsamples shows whether the solution depends on initialization or a small set of observations. Agreement with hierarchical clustering evaluates whether a different clustering method finds a similar structure. Feature-sensitivity results show how much the substantive definition of a neighborhood changes the assignments.
+The five-group solution was highly consistent when K-means was started from different initial positions and when the model was refitted to repeated 80% samples. A different clustering method also recovered a broadly similar structure. These checks indicate that the main neighborhood patterns are not driven by one random model run or a small number of block groups. Some assignments change when the feature set is substantially altered, so the archetypes should be treated as planning summaries rather than permanent neighborhood labels.
 
-## Map of neighborhood archetypes
+### Geographic pattern and planning use
 
-The repository subset contains all block groups in Douglas, Sarpy, and Pottawattamie Counties. Therefore, this map represents the three-county study area rather than official Omaha and Council Bluffs city boundaries.
+The map shows where each archetype occurs across Douglas, Sarpy, and Pottawattamie Counties. It converts the statistical grouping into a geographic planning tool by allowing decision makers to identify clusters of neighborhoods with similar transportation and development conditions. Because the source data were filtered by county, the map represents the three-county study area rather than official Omaha and Council Bluffs city boundaries.
 
 ```{r map-clusters, cache=TRUE}
 ne_shapes <- block_groups(state = "NE", county = c("Douglas", "Sarpy"),
@@ -134,6 +156,8 @@ ggplot(mapped_clusters) +
   theme(plot.title = element_text(face = "bold"),
         legend.position = "right")
 ```
+
+Used with the group's transit-gap and employment-accessibility analyses, this map can help identify places where transportation need and available access do not align. Rather than applying one regional policy everywhere, planners can use the archetypes to select strategies suited to each neighborhood context and then prioritize individual block groups using the group's more detailed transit and employment measures.
 
 ## Limitations
 

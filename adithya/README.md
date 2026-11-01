@@ -5,7 +5,7 @@ This folder contains the unsupervised-learning portion of the Omaha-Council Bluf
 ## Main files
 
 - `neighborhood_clustering.py`: cleans the selected variables, standardizes them, compares K-means solutions for `k = 2` through `8`, fits the five-cluster model, and exports the results.
-- `Neighborhood_Archetypes_Report.Rmd`: report-ready explanation, tables, figures, statistical comparison, and an archetype map.
+- `Neighborhood_Archetypes_Report.Rmd`: report-ready Methods and Results sections, tables, figures, planning interpretation, and an archetype map.
 - `results/`: generated cluster assignments, profiles, validation tables, and figures.
 
 ## Run the analysis
