@@ -1,0 +1,11 @@
+Neighborhood clustering validation summary
+Rows: 727
+Features: D1B, D1C, D2A_EPHHM, D3B, D4A_Ranked, D5CRI
+Selected k: 5
+Kruskal-Wallis H for zero-car share: 75.320
+p-value: 1.70503e-15
+epsilon-squared effect size: 0.099
+Random-initialization ARI median: 0.998
+80% subsample ARI median: 0.951
+80% subsample ARI 5th percentile: 0.913
+Ward hierarchical ARI vs K-means: 0.729
