@@ -18,11 +18,11 @@ ia_blocks <- block_groups(state = "IA", county = "Pottawattamie", year = 2010, c
 omaha_metro_shapes <- rbind(ne_blocks, ia_blocks) %>%
   mutate(GEOID = str_extract(GEO_ID, "\\d{12}$"))
 
-# 2. Read directly from the pre-filtered Omaha Core CSV
+# 2. Read directly from the pre-filtered Omaha Core CSV using Pct_AO0
 sld_dt <- fread(
-  "EPA_SmartLocationDatabase_Omaha_Core3.csv",
+  "EPA_SDL_OmahaCouncilBluffs.csv",
   select = c("STATEFP", "COUNTYFP", "TRACTCE", "BLKGRPCE", 
-             "D2A_JPHH", "D3A", "D4A", "NatWalkInd"),
+             "D2A_JPHH", "D3A", "D4A", "NatWalkInd", "Pct_AO0"),
   colClasses = "character"
 )
 
@@ -34,7 +34,7 @@ sld_dt[, GEOID := paste0(
   str_pad(BLKGRPCE, 1, "left", "0")
 )]
 
-numeric_cols <- c("D2A_JPHH", "D3A", "D4A", "NatWalkInd")
+numeric_cols <- c("D2A_JPHH", "D3A", "D4A", "NatWalkInd", "Pct_AO0")
 sld_dt[, (numeric_cols) := lapply(.SD, as.numeric), .SDcols = numeric_cols]
 
 # 3. Spatial Inner Join
@@ -168,4 +168,34 @@ ggplot(data = mapped_sld_transit) +
     caption = "Source: US EPA SLD V3 (2021) | Note: Grey indicates no GTFS transit coverage"
   )
 
+```
+
+```{r map-auto-ownership, echo=FALSE, message=FALSE, warning=FALSE, fig.width=9, fig.height=6}
+# Map 5: Zero-Vehicle Households Percentage (Inferno Palette)
+ggplot(data = mapped_sld) +
+  geom_sf(aes(fill = Pct_AO0), color = "white", size = 0.05) +
+  scale_fill_viridis_c(
+    option = "inferno",
+    name = "% Zero-Car\nHouseholds",
+    labels = scales::label_percent(scale = 100), # Multiplies 0.60 by 100 to display 60%
+    na.value = "grey90"
+  ) +
+  coord_sf(
+    crs = 4326,
+    xlim = c(-96.35, -95.75),
+    ylim = c(41.00, 41.40)
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    plot.title = element_text(face = "bold", size = 14),
+    legend.position = "right"
+  ) +
+  labs(
+    title = "Zero-Vehicle Household Percentage (Pct_AO0)",
+    subtitle = "Proportion of households with no automobile available | Omaha-Council Bluffs Metro Core",
+    caption = "Source: US EPA SLD V3 (2021)"
+  )
 ```
