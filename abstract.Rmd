@@ -1,0 +1,17 @@
+---
+title: "abstract"
+output: html_document
+date: "2026-11-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Title
+
+Some title
+
+# Abstract
+
+Abstract
