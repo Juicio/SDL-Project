@@ -56,15 +56,23 @@ library(knitr)
 
 # Introduction
 
-Start with motivation that triggers interest
+For most American households, car ownership is often the single largest expense after housing. It is a financial reality that can become severe when urban planning mandates vehicle ownership. In transit-poor and sprawling neighborhoods, owning multiple automobiles is rarely a luxury, but instead a compulsory toll required to access basic employment, education, and healthcare. This forced reliance acts as a pervasive "car tax," disproportionately impacting low-income families through auto loans, insurance, and maintenance simply to participate in the regional economy. When infrastructure fails to provide viable transportation alternatives, vehicle ownership ceases to represent personal freedom and instead becomes an enforced mechanism of inequality.
 
-Do some literature review, provide reference if anybody did related work
-Reference example:
-Data transformation was conducted using the Tidyverse package [@wickham2019welcome].
+Urban equity is the idea that all people, regardless of income, race, or geographic location, deserve fair and affordable access to the opportunities and public infrastructure that enable socio-economic mobility. In transportation planning, urban equity is crucial because mobility directly dictates life outcomes. Without reliable transportation to employment centers, quality healthcare, fresh food, and education, marginalized communities face significant barriers to escaping poverty.
 
-Describe the problem and its importance
+A central driver of urban inequity is the transit gap: the disparity between where public transit dependent populations live and where high-quality and frequent public transportation service is actually provided. Bridging the transit gap is important because when public transit options fall short of community needs, low-income households are either forced into high-cost vehicle ownership or left isolated from economic opportunities. Closing this gap ensures that low-income residents can reliably reach jobs and essential services.
 
-Provide a summary of what the following section will discuss and how they touch the problem
+The transit gap has a long research history. It began in 1968, when John F. Kain proposed the Spatial Mismatch Hypothesis, which describes a physical separation between where low-income and minority workers live and where entry-level jobs are located. [@kain1968housing] His study focuses on how residential segregation combined with the suburbanization of entry-level jobs creates a spatial disconnect where physical distance and inadequate transit drive systemic unemployment.
+
+Thirty years later, Litman focuses on the difference between horizontal equity (fair allocation of resource) and vertical equity (allocating resources to compensate for socio-economic disadvantage). [@litman2002evaluating] The work demonstrates how failing to the close the transit gap exacerbates income equality and social isolation. Grengs analyzes the transit gap in Detroit where he demonstrates that public transit riders face severe access penalites compared to car owners. [@grengs2010job] He argues that expanding transit access is far more effective for urban equity than continuing to subsidize auto-oriented development.
+
+In 2013, Jiao and Dillivan coin the term “Transit Desert”. [@jiao2013transit] They formulate a spatial methodology comparing transit-dependent populations (demand) with public transit infrastructure (supply) across urban neighborhoods. The work shows that the areas with the highest transit needs often receive disproportionately low transit investment, exacerbating urban inequality. Blumenberg and Pierce focus on the intersection of household poverty, forced vehicle ownership, and transit dependence. [@blumenberg2014multimodal] They show that while automobiles significantly expand job access, the financial strain of maintaining a car in transit-poor areas often offsets economic gains, reinforcing the need for reliable public transit alternatives.
+
+The Omaha-Council Bluffs metropolitan region has historically evolved around low-density and car-centric suburban growth, requiring most households to own at least one vehicle. The decline of early streetcar networks coupled with highway expansion encouraged suburbanization, leaving local transportation infrastructure structured for private automobile ownership. Consequently, the transit gap presents a major hurdle for urban equity. With major commercial corridors, healthcare facilities, and industrial employment hubs being widely spread, a severe transit gap places a disproportionate financial burden on low-income residents, isolates non-driving populations, and limits regional socio-economic mobility. 
+
+This study investigates the transit gap in the Omaha-Council Bluff metropolitan area through four distinct analytical lenses: 1) Clustering neighborhoods into archetypes; 2) Determining drivers of auto dependence through prediction models; 3) ; 4) . The intention is to better understand the transit gap, identify the areas it impacts the most, and make strategic policy recommendations for city planners and regional managers such as the Metropolitan Area Planning Agency (MAPA) and Metro Transit.
+
+The paper is divided into the following sections: a description of the Smart Location Database used for analysis; Methods defining experimental and statistical models; Results stating the findings, their significance, and policy recommendations; a Conclusion; and Future Work detailing how to further discovery and tools creation.
 
 # Smart Location Database
 
