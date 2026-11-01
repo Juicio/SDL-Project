@@ -1,0 +1,143 @@
+---
+title: "Transit and Employment Accessibility in the Omaha–Council Bluffs Study Area"
+author: "Abhijith Reddy"
+date: "2026-11-01"
+output:
+  pdf_document:
+    number_sections: true
+    fig_caption: true
+---
+
+```{r abhijith-setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
+                      fig.align = "center", fig.width = 8, fig.height = 4.4)
+
+# This single report generates its own figures from the existing cleaned
+# analysis data. It can be knitted from the project root or the abhijith folder.
+possible_files <- c(
+  "abhijith/results/cleaned_analysis_blockgroups.csv",
+  "results/cleaned_analysis_blockgroups.csv",
+  "../abhijith/results/cleaned_analysis_blockgroups.csv"
+)
+input_file <- possible_files[file.exists(possible_files)][1]
+if (length(input_file) == 0L || is.na(input_file)) {
+  stop("Missing cleaned_analysis_blockgroups.csv. Knit from the project root or abhijith folder, with the existing results folder present.")
+}
+transit_data <- read.csv(input_file, stringsAsFactors = FALSE)
+required_cols <- c("county", "Pct_AO0", "D4A", "D4C", "D5BR", "D5AR")
+if (!all(required_cols %in% names(transit_data))) {
+  stop("Cleaned data are missing: ", paste(setdiff(required_cols, names(transit_data)), collapse = ", "))
+}
+for (v in c("Pct_AO0", "D4A", "D4C", "D5BR", "D5AR")) {
+  transit_data[[v]] <- suppressWarnings(as.numeric(transit_data[[v]]))
+  transit_data[[v]][transit_data[[v]] == -99999] <- NA_real_
+}
+
+carfree_threshold <- unname(quantile(transit_data$Pct_AO0, 0.75, na.rm = TRUE))
+transit_median <- median(transit_data$D5BR, na.rm = TRUE)
+transit_data$higher_carfree <- !is.na(transit_data$Pct_AO0) &
+  transit_data$Pct_AO0 >= carfree_threshold
+transit_data$measured_jobs <- !is.na(transit_data$D5BR)
+transit_data$review_candidate <- transit_data$higher_carfree &
+  transit_data$measured_jobs & transit_data$D5BR < transit_median
+
+higher_measured <- sum(transit_data$higher_carfree & transit_data$measured_jobs)
+higher_missing <- sum(transit_data$higher_carfree & !transit_data$measured_jobs)
+candidates <- sum(transit_data$review_candidate)
+higher_notflagged <- higher_measured - candidates
+median_by_group <- c(
+  median(transit_data$D5BR[!transit_data$higher_carfree], na.rm = TRUE),
+  median(transit_data$D5BR[transit_data$higher_carfree], na.rm = TRUE)
+)
+county_names <- c("Douglas", "Sarpy", "Pottawattamie")
+county_total <- sapply(county_names, function(x) sum(grepl(x, transit_data$county)))
+county_observed <- sapply(county_names, function(x) sum(grepl(x, transit_data$county) & transit_data$measured_jobs))
+county_coverage <- 100 * county_observed / county_total
+```
+
+# Methods
+
+## Transit and Employment Accessibility
+
+The purpose of this analysis is to determine whether residents of neighborhoods with greater reliance on public transportation can reach employment opportunities as readily as residents elsewhere in the Omaha–Council Bluffs study area. Rather than treating the presence of a bus stop as proof of meaningful access, the analysis considers both the share of households without a vehicle and modeled access to employment using transit. This distinction matters to city planners: a neighborhood may have a nearby stop but still require lengthy trips or transfers to reach workplaces.
+
+The study uses the EPA Smart Location Database extract for 727 Census block groups across Douglas and Sarpy counties in Nebraska and Pottawattamie County in Iowa. The primary measure of potential transit reliance is **Zero-Car Household Share** (`Pct_AO0`), the proportion of households with no available vehicle. The central outcome is **Employment Accessibility by Transit** (`D5BR`), a travel-time-weighted model of employment access using the transit schedules represented in the EPA data. Supporting measures include **Distance to Nearest Transit Stop** (`D4A`) and **Peak-Period Transit Service Frequency** (`D4C`). **Employment Accessibility by Automobile** (`D5AR`) was examined as descriptive context, but was not used to classify transit-access gaps. The model's job-access values are accessibility scores, not counts of jobs secured by residents.
+
+The dataset was cleaned by converting numerical indicators to numeric values and treating missing or negative EPA sentinel values (including `-99999`) as unavailable rather than as zero service. We compared available observations using medians, which are less sensitive to extreme values than means, and Spearman rank correlations to describe associations without assuming a linear relationship. Because different variables have different data coverage, comparisons use valid observations for each measure rather than a single common denominator. These are descriptive comparisons; they do not demonstrate that transit service causes changes in vehicle ownership or employment.
+
+To identify places deserving closer review, we defined **higher-car-free block groups** as those at or above the 75th percentile of zero-car household share across all 727 block groups, approximately **8.68%**. This identifies 182 block groups. A block group was then flagged as a **relative employment-access review candidate** only when it met both conditions: it was in the higher-car-free group, and its available transit employment-access score was below the study area's observed median of **9,975**. This screening rule flags 47 of the 131 higher-car-free block groups with usable scores. An additional 51 higher-car-free block groups lack transit employment-access values and therefore cannot be screened. These project-specific thresholds are **not official transit-service standards**, and the 47 candidates should not be described as confirmed transit deserts.
+
+# Results
+
+## Transit and Employment Accessibility
+
+### The regional trend is encouraging, but it is not the whole story
+
+Among locations with available observations, neighborhoods with larger shares of car-free households generally have better measured access to transit. The median modeled employment-access score is **29,142** for the higher-car-free group, compared with **6,031** for other measured block groups. The higher-car-free group also has a shorter typical distance to a transit stop (approximately **380 meters**, versus **506 meters**) and more frequent observed evening-peak transit service (median **3.00**, versus **1.33**). These indicators suggest that some transit resources are concentrated where residents are more likely to need them. However, the values represent different sets of measured block groups, and a favorable regional median can conceal substantial differences among neighborhoods.
+
+```{r abhijith-jobs-by-group, fig.cap="Median modeled employment accessibility by public transit for block groups with lower and higher zero-car household shares. The values are travel-time-weighted accessibility scores, not observed employment counts; only locations with nonmissing scores are compared."}
+plot_values <- round(median_by_group)
+bar_mid <- barplot(plot_values,
+  names.arg = c("Other measured\nblock groups", "Higher-car-free\nblock groups"),
+  col = c("gray70", "gray35"), border = NA,
+  ylim = c(0, max(plot_values) * 1.24),
+  ylab = "Median modeled transit employment-access score",
+  main = "Employment access is higher in the observed car-free group",
+  cex.names = 0.95, las = 1)
+text(bar_mid, plot_values + max(plot_values) * 0.045,
+     labels = format(plot_values, big.mark = ",", scientific = FALSE), cex = 1)
+box(bty = "l")
+```
+
+The comparison in Figure \ref{fig:abhijith-jobs-by-group} establishes the overall pattern but does not imply that every car-free household has adequate access to jobs. Bus routes that pass close to a neighborhood may not connect efficiently to particular employment centers or match early-morning, evening, or weekend shifts. City planners should therefore assess the distribution of access within higher-need communities rather than rely on the favorable group median alone.
+
+### Forty-seven places warrant a closer employment-access review
+
+The most actionable finding is that **47 higher-car-free block groups with usable data fall below the regional median in modeled transit employment access**. This represents about **36% of the 131** measured higher-car-free block groups. Such places combine relatively high potential reliance on transit with comparatively low modeled access to employment. They are a practical starting point for additional investigation, not proof of inadequate service. Another **51 higher-car-free block groups** could not be classified because their transit employment-access values are missing.
+
+```{r abhijith-candidate-groups, fig.cap="Screening of the 182 higher-car-free block groups. Forty-seven had below-median modeled transit employment access, 84 had scores at or above the study-area median, and 51 had missing values and could not be assessed. The screening criterion is relative, not a formal service-adequacy standard."}
+counts <- c(candidates, higher_notflagged, higher_missing)
+bar_mid <- barplot(counts,
+  names.arg = c("Below-median access\n(review candidates)",
+                "At/above-median\naccess", "Missing data\n(not classified)"),
+  col = c("gray30", "gray65", "gray88"), border = NA,
+  ylim = c(0, max(counts) * 1.22),
+  ylab = "Number of higher-car-free block groups",
+  main = "A favorable average conceals potential employment-access gaps",
+  cex.names = 0.81, las = 1)
+text(bar_mid, counts + max(counts) * 0.045, labels = counts, cex = 1)
+box(bty = "l")
+```
+
+Figure \ref{fig:abhijith-candidate-groups} distinguishes two planning problems that should not be confused: places with **measured, relatively weak job access**, and places for which **no reliable assessment is possible with these data**. The first group provides a priority list for field verification. The second points to a data-collection gap. Neither category should automatically trigger route changes without checking current conditions. The reconstructed geographic identifiers in the working extract should also be validated against authoritative Census geography before the 47 locations are mapped or used for site-level decisions.
+
+### Missing data prevent a defensible cross-state ranking
+
+Only **362 of 727 block groups** have usable modeled transit employment-access values. Coverage is particularly uneven across the three counties: **341 of 497** Douglas County block groups, **20 of 137** Sarpy County block groups, and only **1 of 93** Pottawattamie County block groups have such values. This is a limitation of the available model inputs, not evidence that transit is absent from locations without a score. The study therefore does not support a reliable claim that Omaha's transit system provides better employment access than Council Bluffs', or vice versa.
+
+```{r abhijith-county-coverage, fig.cap="Availability of modeled transit employment-access scores by county, expressed as a percentage of block groups in each county. The bars show data completeness, not actual transit service coverage or quality."}
+bar_mid <- barplot(round(county_coverage, 1),
+  names.arg = c("Douglas\n(Nebraska)", "Sarpy\n(Nebraska)", "Pottawattamie\n(Iowa)"),
+  col = c("gray35", "gray58", "gray78"), border = NA,
+  ylim = c(0, 85), ylab = "Block groups with usable scores (%)",
+  main = "Transit employment-access data are unevenly available",
+  cex.names = 0.88, las = 1)
+text(bar_mid, county_coverage + 4,
+  labels = paste0(county_observed, " of ", county_total, " (", round(county_coverage, 1), "%)"),
+  cex = 0.84)
+box(bty = "l")
+```
+
+As Figure \ref{fig:abhijith-county-coverage} shows, the Iowa-side coverage is too limited for a balanced metropolitan comparison. Evaluating equity across state lines will require current and consistently modeled route schedules and employment destinations for the entire metro area, especially the places where the EPA indicator is missing. Comparing only the observed locations would risk rewarding the best-measured county rather than identifying actual disparities in residents' opportunities.
+
+### Policy recommendations for city and regional planners
+
+**First, validate and investigate the 47 candidate block groups before setting investment priorities.** Planners can overlay validated Census geography with current routes, service spans, transfer requirements, and major job destinations. A review should ask whether a typical resident without a car can reach common employment sites at the hours when jobs begin and end. Pairing modeled indicators with actual route travel times and rider feedback would distinguish meaningful employment barriers from artifacts of the historical data.
+
+**Second, target operational improvements to verified gaps rather than prescribing the same solution everywhere.** Where current travel times reveal a mismatch between residential areas and job centers, practical options may include improved connecting routes, better transfer coordination, more useful early-morning or evening service, or safer pedestrian approaches to existing stops. The appropriate intervention should be selected only after identifying which part of the complete trip creates the barrier; a nearby bus stop by itself is not sufficient evidence of accessibility.
+
+**Third, address missing evidence before making regional funding comparisons.** The 51 unclassified higher-car-free block groups, and especially the limited data for Pottawattamie County, should be prioritized for updated transit scheduling and accessibility modeling. Current GTFS schedules, consistent employment-location data, and validated geographic identifiers would enable a more defensible comparison of Nebraska and Iowa neighborhoods. Missing EPA values must never be treated as zero transit service.
+
+**Finally, measure outcomes after changes.** Before implementing a pilot, planners should establish a baseline for transit travel time to major job destinations, time-of-day service availability, and transfer burden. Repeating these measurements after any intervention, alongside consultation with transit-dependent residents and employers, would show whether the investment actually expanded practical access to employment.
+
+The central finding is not that public transportation is uniformly poor across the region. In the areas with measured data, job accessibility is typically better where car-free households are more common. Yet **47 plausible mismatches** warrant closer inspection, and substantial missing data prevent strong conclusions about many other neighborhoods. An equity-focused planning response should investigate the flagged locations, fill data gaps, and prioritize improvements that demonstrably make work reachable for people without a car.
