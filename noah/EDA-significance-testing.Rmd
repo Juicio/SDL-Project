@@ -2,6 +2,9 @@
 title: 'Transit Equity and Built Environment Disparities: Omaha Metro vs. Council
   Bluffs'
 output:
+  html_document:
+    toc: true
+    df_print: paged
   pdf_document:
     toc: true
     number_sections: true
@@ -10,9 +13,6 @@ output:
     - booktabs
     - colortbl
     - float
-  html_document:
-    toc: true
-    df_print: paged
 date: "2026-11-01"
 ---
 # Smart Location Database
@@ -172,46 +172,53 @@ normality_table <- clean_data %>%
 
 Are there differences in transit access between Omaha and Iowa metro areas and are they explained by typical urban population gradients or as a result of the boundary between the two states?
 
-```{r figure_normality_densities, fig.width = 10, fig.height = 7}
-dist_plot_data <- clean_data %>%
-  select(jurisdiction, all_of(analysis_vars)) %>%
+```{r fig-distributions, echo=FALSE, message=FALSE, warning=FALSE, fig.width=9, fig.height=7, out.width="100%", fig.align="center"}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+plot_data <- sld_clean %>%
+  select(
+    jurisdiction, 
+    `Transit Stop Proximity (D4A, meters)` = D4A,
+    `Transit Job Access (D5CR, jobs)` = D5CR,
+    `National Walkability Index (NatWalkInd)` = NatWalkInd,
+    `Zero-Car Households (Pct_ZeroCar, %)` = Pct_ZeroCar
+  ) %>%
   pivot_longer(
-    cols = all_of(analysis_vars),
+    cols = -jurisdiction,
     names_to = "indicator",
     values_to = "value"
-  ) %>%
-  filter(!is.na(value)) %>%
-  mutate(
-    value = if_else(indicator == "D2A_JPHH", log1p(value), value),
-    Dimension = case_when(
-      indicator == "NatWalkInd"  ~ "Walkability Index (NatWalkInd)",
-      indicator == "D1A"         ~ "Residential Density (D1A)",
-      indicator == "D2A_JPHH"    ~ "Jobs/HH Ratio (log1p scale)",
-      indicator == "D3A"         ~ "Intersection Density (D3A)",
-      indicator == "D4A"         ~ "Stop Proximity (D4A, m)",
-      indicator == "D5AR"        ~ "Auto Job Access (D5AR)",
-      indicator == "D5CR"        ~ "Transit Job Access (D5CR)",
-      indicator == "Pct_ZeroCar" ~ "Zero-Car HHs (%)",
-      TRUE                       ~ indicator
-    )
   )
 
-ggplot(dist_plot_data, aes(x = value, fill = jurisdiction, color = jurisdiction)) +
-  geom_density(alpha = 0.35, linewidth = 0.6) +
-  facet_wrap(~Dimension, scales = "free", ncol = 4) +
-  scale_fill_manual(values = c("Council Bluffs (IA)" = "#c85a5a", "Omaha (NE)" = "#2c7bb6")) +
-  scale_color_manual(values = c("Council Bluffs (IA)" = "#982b2b", "Omaha (NE)" = "#184e77")) +
-  theme_minimal(base_size = 10) +
-  theme(
-    legend.position = "top",
-    legend.title = element_blank(),
-    strip.text = element_text(face = "bold", size = 8.5),
-    panel.grid.minor = element_blank(),
-    axis.title = element_blank(),
-    plot.title = element_text(face = "bold", size = 12),
-    plot.subtitle = element_text(size = 9, color = "grey35", margin = margin(b = 10))
+ggplot(plot_data, aes(x = value, fill = jurisdiction, color = jurisdiction)) +
+  geom_density(alpha = 0.35, linewidth = 0.8) +
+  facet_wrap(~ indicator, scales = "free", ncol = 2) +
+  scale_fill_manual(
+    values = c("Council Bluffs (IA)" = "#B24C4C", "Omaha (NE)" = "#3A6B88")
+  ) +
+  scale_color_manual(
+    values = c("Council Bluffs (IA)" = "#8B0000", "Omaha (NE)" = "#1A3B5C")
   ) +
   labs(
+    title = "Figure 1: Comparative Density Distributions of Transit Equity Indicators",
+    subtitle = "Kernel density estimates across census block groups in Omaha (NE) and Council Bluffs (IA)",
+    x = "Indicator Value (Block Group Scale)",
+    y = "Relative Frequency",
+    fill = "Jurisdiction",
+    color = "Jurisdiction"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold", size = 10),
+    legend.text = element_text(size = 9),
+    strip.text = element_text(face = "bold", size = 10),
+    strip.background = element_rect(fill = "#F2F2F2", color = NA),
+    plot.title = element_text(face = "bold", size = 12),
+    plot.subtitle = element_text(size = 9.5, color = "gray30", margin = margin(b = 10)),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.2, "lines")
   )
 ```
 
