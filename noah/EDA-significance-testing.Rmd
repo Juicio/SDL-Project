@@ -39,16 +39,19 @@ options(scipen = 999, tigris_class = "sf", tigris_use_cache = TRUE)
 ```
 
 ## 1.1 Variables 
-- **Auto Regional Job Accessibility (D5AR):** Total regional employment accessible within a 45-minute travel time by automobile from the census block group. Higher values indicate greater regional labor-market reach via personal vehicle.
-- **Census Block Group Identifier (GEOID12):** Unique 12-digit Federal Information Processing Standards (FIPS) code used to merge tabular Smart Location Database records with Census Bureau TIGRIS geographic polygon shapefiles.
-- **Distance to Nearest Transit Stop (D4A):** Network pedestrian walking distance (in meters) from the block group population centroid to the nearest fixed-route public transit stop. Values are capped at an upper threshold of 3,000 meters to limit the statistical distortion of unserved exurban areas while preserving rank isolation.
-- **Gross Residential Density (D1A):** Total housing units per acre of unprotected land. Higher values indicate denser residential settlement patterns capable of supporting frequent transit service.
-- **National Walkability Index (NatWalkInd):** Composite index evaluating overall pedestrian friendliness based on employment and household diversity, intersection density, and transit proximity. Scale: $1 =$ Least Walkable (Auto-Dependent Car Suburb); $20 =$ Most Walkable (Pedestrian-Oriented Urban Core).
-- **Percentage of Zero-Car Households (Pct_ZeroCar):** Proportion of occupied housing units within the block group that do not own or have access to a personal passenger vehicle, derived from Census demographic and vehicle availability tables. Used as the primary operational indicator of local transit dependency.
-- **Street Intersection Density (D3A):** Density of multi-leg street intersections per square mile of unprotected land. Scale: Higher values reflect a tighter, more interconnected pedestrian street grid that minimizes walking detour distances.
-- **Transit Bivariate Matrix Group (group):** Combined 9-cell categorical grouping code (paste0(need_cat, "-", access_cat)) cross-tabulating relative transit need against transit supply, identifying spatial equity alignment and critical transit deserts.
-- **Transit Regional Job Accessibility (D5CR):** Total regional employment accessible within a 45-minute commute via public transit. Captures the functional employment utility of the regional transit network beyond physical stop presence.
-- **Jobs-to-Household Ratio (D2A_JPHH):** Balance between local employment opportunities and resident households within the block group. Captures local land-use mix and proximity between trip origins and destinations.
+* **Auto Regional Job Accessibility (`D5AR`):** Total regional employment accessible within a 45-minute travel time by automobile from the census block group. Higher values indicate greater regional labor-market reach via personal vehicle.
+* **Census Block Group Identifier (`GEOID` / `GEOID12`):** Unique 12-digit Federal Information Processing Series (FIPS) code used to uniquely identify each Census Block Group nationwide and link tabular data to Census TIGRIS shapefiles.
+* **Distance to Nearest Transit Stop (`D4A`):** Network pedestrian walking distance (in meters) from the block group population centroid to the nearest fixed-route public transit stop (capped at an upper threshold of 3,000 meters to limit the distortion of unserved areas).
+* **Employment & Housing Mix (`D2B_E8MIX`):** Balance between housing units and employment opportunities within the block group. Scale: 0 = pure residential or commercial; 1 = highly balanced land-use mix.
+* **Gross Employment Density (`D1C`):** Total employment (jobs) per acre of unprotected land. Higher values indicate greater concentrations of commercial activity.
+* **Gross Residential Density (`D1A`):** Housing units per acre of unprotected land. Higher values reflect denser residential settlement patterns capable of supporting frequent transit.
+* **Jobs-to-Household Ratio (`D2A_JPHH`):** The ratio of local jobs to resident households within a block group, capturing localized mixed-use balance and proximity between trip origins and destinations.
+* **Median Household Income (`MedIncome`):** Median household income within the census block group reported in USD.
+* **National Walkability Index (`NatWalkInd`):** Composite index evaluating overall pedestrian friendliness based on density, diversity, design, and transit proximity. Scale: 1 = Least Walkable (Auto-Dependent Car Suburb); 20 = Most Walkable (Pedestrian-Oriented Urban Core).
+* **Percentage of Low-Income Households (`Pct_LowInc`):** Proportion of block group households living below the regional low-income threshold.
+* **Percentage of Zero-Car Households (`Pct_ZeroCar`):** Proportion of occupied housing units within the block group that do not own or have access to a personal vehicle, serving as the operational indicator of transit dependency.
+* **Street Intersection Density (`D3A` / `D3B`):** Density of multi-leg pedestrian street intersections per square mile of unprotected land. Higher values reflect a tighter, more interconnected street grid that minimizes pedestrian detour distances.
+* **Transit Regional Job Accessibility (`D5CR`):** Total regional employment accessible within a 45-minute commute via public transit, capturing functional network utility beyond physical stop presence.
 
 # 2 Methods
 
@@ -213,11 +216,15 @@ ggplot(dist_plot_data, aes(x = value, fill = jurisdiction, color = jurisdiction)
 ```
 
 *Figure 1: Distribution profiles of 8 indicators between both Council Bluffs and Omaha to display skew and normality.*
+*Figure 1:* Comparative Density Distributions of Built Environment and Transit Equity Indicators Between Council Bluffs (IA) and Omaha (NE).
 
-The distribution confirms severe skew and non-normality across all 8 indicators in both metro areas.This confirmed the need to use non-parametric measures.
 
 
-Hypothesis testing with a Bonferroni correction identified several statistically significant differences between Omaha and Council Bluffs (Table 2). Only the ratio of jobs to households had no significant difference between the two states. Omaha had higher transit employment reach, walkability, and automobile job access and lower distance to transit stops. Council Bluffs on the other hand had significantly lower percentage of households with 0 cars. This suggests that Omaha has greater transit access as well as pederstrian walkability, whereas Council bluffs is heavily reliant on car ownership for transportation. A major takeaway of this is that while Council Bluffs has lower zero-car households they also have less access via car to job opportunities. Additionally, those that do not have a car live in transportation deserts due to Council Bluffs having longer distance to transit stops and lower access to jobs via transit.
+Across the bi-state metropolitan area, transit access and urban infrastructure have uneven patterns. Rather than a gradient that peaks at the metropolitan core and then has a smooth decline the further you get away from downtown there is an uneven distribution of connectivity and transit services that drops off starkly at the Missouri river boundary. Findings from these distributions (figure 1) show Council Bluffs has lower intersection density and more dispersed street pattern that would be consistent with car based development. the distribution for car ownership shows the majority of households have at least one vehicle. However a small collection of block groups have disproportionately high concentrations of zero-vehicle households. Additionally job access by car is tightly grouped around the interstate network.  
+
+
+Analysis across the bi-state area confirms inequity exists between Omaha and Council Bluffs across seven of the eight indicators. The only exception was there was an even number of jobs to households on both sides. Omaha block groups had significantly greater transit employment reach, superior walkability, broader automobile job access, and far closer proximity to physical transit stops. Conversely Council Bluffs has a lower proportion of zero-car households indicating that residents are reliant on car ownership for mobility. Additionally Council Bluffs resident despite having a higher proportion of zero car households have fewer access to jobs than their Omaha peers. For those without a vehicle in council bluffs they are even more vulnerable with longer walking distances and restricted access to jobs via transit. 
+
 
 ```{r, echo = FALSE}
 jurisdiction_medians <- clean_data %>%
@@ -440,7 +447,10 @@ ggsave(
 
 *Figure 2: Spatial mismatch between zero-vehicle household and job accessibility.*
 
-The 3x3 bivariate figure identifies areas that feature poor access to public transit as well as a higher percentage of zero car households. In central Omaha, there are high concentrations of zero-vehicle households that are associated with moderate to high transit job accessibility. In contrast, central Council Bluffs contains areas that sit in the lowest tier of job accessibility and the highest amount of zero vehicle households. This leaves residents without personal vehicles facing severe barriers to employment and lengthy commute times.
+Figure 2 visualizes transit equity between the two states by cross referencing percentage of households with no car against the functional transit supply (the number of regional jobs accessible via transit). Critical transit deserts are the bright red blocks with high proportion of zero car households as well as low amounts of transit accessible jobs. In Council Bluffs, these areas are neighborhoods bordering the river. In Omaha there are some of these in portions of north and south Omaha. Residents living in this area face significant structural challenges by not owning a vehicle. In contrast the dark red can be seen along Omahas Dodge street and represents those that have low car ownership but have a high amount of jobs accessible via transit. This means those without cars in these areas have alternative ways off accessing job opportunity. There is very little blocks of this color in Council Bluffs who lack transit options to buffer the effects of low car ownership.  
+
+
+
 ## 3.3 Physical Transit Stop Proximity Role in Job Access
 
 ```{r, echo = FALSE}
@@ -525,8 +535,12 @@ ggsave(
 ```
 
 *Figure 3: Walking proximity and percent of zero car households.*
+Figure 3 evaluates physical infrastructure coverage by mapping transit need (percentage of zero-car households) against walking distance to the nearest transit stop. The Bright red represents those that have walking distance to transit stops that exceed 3000 meters and have a higher percentage of zero-vehicle households. In these groups access to transit stops is poor making them part of a transit desert. Nearly 40% of Council Bluffs transit sits beyond walking distance for those living in Council Bluffs. The absence of transit stops creates a barrier for residents and a greater need for vehicle ownership. This suggests that a great deal of the problem for Council Bluffs is a result of physical infrastructure. 
 
-Evaluating walking distance to transit stops alongside job reach demonstrates that residents in Council Bluffs experience substantial barriers to regional employment. Several block groups within central Council Bluffs that lack access to personal vehicles also exhibit moderate to long distances to their nearest transit stop. While some of these neighborhoods have fixed-route bus stops, they are located significantly farther away than those in central Omaha. This confirms that transit-dependent residents in Council Bluffs face steeper physical access hurdles than those living across the river in Douglas County.
+# Policy and Planning recommendations 
+Council Bluff has an access cliff at the state line where bus services are limited and reliance on cars is much greater when compared to Omaha. Council Bluffs resident rely on jobs located within the core metro area of Omaha but are cut off due to poor transit services and lack of a vehicle. An interstate partnership from Council Bluffs to key job areas in Omaha is needed to bridge the job accessibility gap that exists between the two cities. Additionally land use reforms in commercial areas within Council Bluffs to promote greater walkability through more protected pedestrian crossings and continuous sidewalk networks.This would also reduce walking barriers to transit hubs in areas with higher population density. Additionally a shared bus pass system between Omaha and Council Bluffs may help to reduce friction between the two systems as well as make it more realistic for individuals to transfer from different bus routes without long wait times. 
+
+
 
 # 4 Limitations 
 The distance-to-transit-stop variable (D4A) was assigned an artificial upper threshold of 3,000 meters in the source dataset. While this cap limits distortion from extreme rural outliers, it potentially masks the true degree of physical isolation experienced by households situated beyond that perimeter. Similarly, the 45-minute commute window (D5CR, D5AR) applies a fixed ceiling that may not reflect the reality of Council Bluffs residents who must undertake daily interstate commutes well beyond 45 minutes to reach regional employment centers.
