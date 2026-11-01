@@ -2,9 +2,6 @@
 title: 'Transit Equity and Built Environment Disparities: Omaha Metro vs. Council
   Bluffs'
 output:
-  html_document:
-    toc: true
-    df_print: paged
   pdf_document:
     toc: true
     number_sections: true
@@ -13,6 +10,9 @@ output:
     - booktabs
     - colortbl
     - float
+  html_document:
+    toc: true
+    df_print: paged
 date: "2026-11-01"
 ---
 
