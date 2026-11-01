@@ -46,8 +46,9 @@ library(knitr)
 
 ## Variables
 
-Of the 90 variables in the Smart Location Database, we focus on a subset that is relevant to our analysis of urban equity in the Omaha Metro area. The selected variables are:
+The SLD is a rich dataset of 90 unique features. We focus on a subset that is relevant to our analysis of urban equity in the Omaha-Council Bluffs Metro area. The utilized variables are:
 
+- **Census Block Group Identifier (GEOID):** A unique 12-digit Federal Information Processing Series (FIPS) code that uniquely identifies each Census Block Group nationwide.
 - **Distance to Nearest Transit Stop (D4A):** Distance (in meters) from the block group population centroid to the nearest transit stop.
 - **Employment & Housing Mix (D2B_E8MIX):** Balance between housing units and employment opportunities within the block group. Scale: 0 = Pure residential or pure commercial; 1 = Highly balanced mix of jobs and housing.
 - **Gross Employment Density (D1C):** Total jobs per acre of unprotected land. Higher values indicate higher concentrations of employment.

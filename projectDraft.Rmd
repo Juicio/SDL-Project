@@ -15,17 +15,19 @@ header-includes:
   - \captionsetup[figure]{font=it}
 bibliography: references.bib
 csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa.csl
+link-citations: true
+colorlinks: true
 output:
-  html_document:
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+  bookdown::html_document2:
     toc: true
     toc_depth: 2
     number_sections: true
     theme: flatly
     df_print: paged
-  pdf_document:
-    toc: true
-    toc_depth: 2
-    number_sections: true
 abstract: |
   This project investigates [insert core problem/dataset] using exploratory data analysis and statistical modeling techniques. Using data sourced from [insert source], we apply [insert key methods] to evaluate [insert main hypothesis/research question]. Our primary findings demonstrate that [insert key quantitative result]. These results suggest [insert broader implication for data science/domain].
 ---
@@ -66,15 +68,27 @@ Provide a summary of what the following section will discuss and how they touch 
 
 # Smart Location Database
 
-Exact source of data (should give link)
+The EPA Smart Location Database (SLD) is a nationwide and open-source geographic resource developed by the U.S. Environmental Protection Agency. [@epa_sld_2021] It is designed to measure and analyze built environment variables across census block groups. Designed for urban planners, transportation modelers, and policy researchers, the SLD provides standardized indicators structured around the "Five D's" of urban planning: Density, Diversity, Design, Destination Accessibility, and Distance to Transit. By aggregating different spatial metrics including gross residential density, street intersection frequency, job-housing mix, transit service availability, and regional job accessibility into a single dataset, the database allows analysts to evaluate how neighborhood structure shapes regional travel behavior.
 
-Variables in the data
+The primary aim of the Smart Location Database is to help create sustainable, resilient, and transit-supported communities by providing an empirical foundation for land-use and transportation decisions. By offering accessible and consistent spatial indicators across all U.S. metropolitan regions, the database empowers researchers to predict travel demand, evaluate vehicle miles traveled, model household auto ownership, and identify areas with pronounced walkability or transit accessibility gaps. Ultimately, the SLD seeks to support multi-modal planning initiatives that lower greenhouse gas emissions, enhance urban mobility options, and inform equitable land development strategies across diverse regional areas.
 
-What was the primary aim of data collection
+The SLD is a vast dataset consisting of 220,740 rows with a size of almost 200 MB. Since the Omaha-Council Bluffs metropolitan area resides in Douglas, Sarpy, and Pottawattamie counties, the tigris R-package was utilized to identify the specific census blocks of the region. The rows matching these blocks were extracted and placed in their own file with a final 728 rows and size of roughly 663 KB. This smaller, focused dataset allowed for more efficient analysis of the metropolitan area.
 
-How is this data useful for your current analysis
+It should be noted that the SLD makes use of sentinel values for missing data. For example, the Distance to Transit Stop feature uses the value “-99999” for census blocks that have no regional transit. These values are handled by omission or recoding based on the analysis utilized as clearly stated in the Methods section.
 
-How did you clean and prepare the data
+The SLD is a rich dataset of 90 unique features. We focus on a subset that is relevant to our analysis of urban equity in the Omaha-Council Bluffs Metro area. The utilized variables are:
+
+- **Census Block Group Identifier (GEOID):** A unique 12-digit Federal Information Processing Series (FIPS) code that uniquely identifies each Census Block Group nationwide.
+- **Distance to Nearest Transit Stop (D4A):** Distance (in meters) from the block group population centroid to the nearest transit stop.
+- **Employment & Housing Mix (D2B_E8MIX):** Balance between housing units and employment opportunities within the block group. Scale: 0 = Pure residential or pure commercial; 1 = Highly balanced mix of jobs and housing.
+- **Gross Employment Density (D1C):** Total jobs per acre of unprotected land. Higher values indicate higher concentrations of employment.
+- **Gross Residential Density (D1A):** Housing units per acre of unprotected land. Higher values indicate denser residential settlement.
+- **Median Household Income (MedIncome):** Census block group median household income in USD.
+- **National Walkability Index (NatWalkInd):** Composite index evaluating overall pedestrian friendliness based on density, diversity, and design. Scale: 1 = Least Walkable (Auto-Dependent Car Suburb); 20 = Most Walkable (Pedestrian-Oriented Urban Core).
+- **Percentage Low-Income Households (Pct_LowInc):** Proportion of households living below the regional low-income threshold.
+- **Street Intersection Density (D3B):** Pedestrian-oriented street grid density (intersections with 3 or more legs per square mile). Scale: Higher values reflect a tighter, more interconnected street grid conducive to walking.
+
+By focusing on the five D's (Density, Diversity, Design, Destination Accessibility, and Distance to Transit), these features allow our study to analyze the presence and impact of transit gaps in the Omaha-Council Bluffs metropolitan area. They provide a comprehensive view of the built environment, socio-economic conditions, and accessibility factors that influence urban equity in the region. The variables permit us to determine unique neighborhood archetypes, predict the primary influences of compulsory automobile ownership, and...
 
 # Methods
 
