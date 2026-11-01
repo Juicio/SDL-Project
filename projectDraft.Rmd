@@ -116,9 +116,15 @@ Should explain the entire report
 The abstract should be a one paragraph summary of this section.
 The title should be a one sentence summary of the abstract.
 
-# Future Work
+# Final Project Outline
 
 "Be very specific"
 Include both how and why
+
+# Code Availability
+
+All reports, code, and datasets can be found at:
+
+https://github.com/Juicio/SDL-Project
 
 # References
