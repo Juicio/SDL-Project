@@ -1,0 +1,34 @@
+```{r abhijith-figure-setup, include=FALSE}
+abhijith_fig <- function(filename) {
+  # Works when this section is knitted inside the team project root or from abhijith/.
+  p_root <- file.path("abhijith", "figures", filename)
+  p_local <- file.path("figures", filename)
+  if (file.exists(p_root)) return(p_root)
+  if (file.exists(p_local)) return(p_local)
+  stop("Cannot find figure: ", filename, ". Knit from the repository root or the abhijith folder.")
+}
+```
+
+## Transit and Employment Accessibility
+
+Our analysis finds that measured transit access is often strongest in places where more households have no car, but this regional pattern conceals neighborhoods that may still face obstacles reaching employment. The important planning question is therefore not simply whether buses reach car-free households, but whether those residents can use available routes to reach jobs. Three figures illustrate the regional trend, the exceptions, and the limits of the evidence.
+
+```{r abhijith-plot-access, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Median modeled access to jobs by public transit in block groups with higher and lower shares of households without vehicles. Values are travel-time-weighted accessibility scores, not actual job counts.", fig.align="center", out.width="83%"}
+knitr::include_graphics(abhijith_fig("02_jobs_median_by_carfree_group.png"))
+```
+
+Figure \ref{fig:abhijith-plot-access} shows that higher-car-free neighborhoods with usable transit records had a substantially higher median modeled job-access score than other observed neighborhoods (29,142 versus 6,031). Higher-car-free neighborhoods also tended to have nearer stops (median distance of about 380 versus 506 meters) and greater evening peak service frequency (median 3.00 versus 1.33 in the available records). Together, these comparisons suggest that measured transit provision is generally concentrated in areas where people are more likely to depend on it. For planners, this is a useful baseline: it indicates that the regional pattern is not uniformly disconnected from transportation need. However, the group-level results cannot show whether every household can reach its particular workplace, and these historical indicators cannot establish cause and effect.
+
+```{r abhijith-plot-candidates, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Higher-car-free block groups grouped by whether modeled transit access to employment was below the study-area median, above it, or unavailable. Forty-seven block groups met the relative screening rule; 51 others could not be screened because the data were missing.", fig.align="center", out.width="83%"}
+knitr::include_graphics(abhijith_fig("05_relative_gap_candidates.png"))
+```
+
+The exceptions are the most important equity finding. Figure \ref{fig:abhijith-plot-candidates} shows that **47 of the 131 higher-car-free block groups with a usable employment-accessibility value**, or about 36%, fell below the study-area median. These communities may have more residents who cannot rely on private cars but comparatively fewer employment opportunities reachable by transit according to the EPA model. A favorable regional average can therefore conceal specific places where job access deserves attention. City planners could treat these 47 locations as an initial review list, verify their locations, and compare current routes, service hours, travel times, connections to job centers, and riders’ experiences before deciding whether service changes are needed. The graphic also shows 51 higher-car-free block groups with missing job-access scores; these must not be counted as having either adequate or inadequate service.
+
+```{r abhijith-plot-coverage, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Coverage of usable modeled transit access to jobs in the three-county study area. Available values are concentrated in Douglas County, while only one Pottawattamie County block group has an available score.", fig.align="center", out.width="83%"}
+knitr::include_graphics(abhijith_fig("01_coverage_by_county.png"))
+```
+
+Figure \ref{fig:abhijith-plot-coverage} demonstrates why these findings cannot support a fair Omaha–Council Bluffs comparison. Transit job-access data were available for 341 of 497 block groups in Douglas County, 20 of 137 in Sarpy County, and only **1 of 93** in Pottawattamie County. Missing observations reflect an important limitation of the historical schedule-based source; they do not establish that transit service is absent. A regional planning agency should obtain current, consistent transit schedules for both sides of the state line and update travel-time accessibility estimates before evaluating which jurisdiction is better served or allocating improvements across the metro area.
+
+Taken together, these results support a targeted, equity-oriented next step rather than a definitive judgment about transit adequacy. The regional trend is encouraging, but the 47 flagged block groups warrant more detailed investigation, and the large gaps in available transit data warrant improved measurement. Validating geographic identifiers and combining current GTFS schedules with employer locations, transfer times, ridership, and local feedback would help planners determine which potential gaps represent real barriers to employment and which interventions could reduce them.

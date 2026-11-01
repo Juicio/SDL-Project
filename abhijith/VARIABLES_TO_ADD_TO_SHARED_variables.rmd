@@ -1,0 +1,27 @@
+<!-- ADD ONLY ENTRIES NOT ALREADY PRESENT IN THE SHARED TOP-LEVEL variables.rmd. Keep the combined list alphabetical. -->
+
+- **Census Block Group Code (BLKGRPCE):** One-digit Census block group code, used with state, county, and tract codes to reconstruct a geographic identifier for analysis.
+
+- **County Code (COUNTYFP):** Three-digit Census county code, used to group block groups into Douglas, Sarpy, or Pottawattamie counties.
+
+- **Distance to Nearest Transit Stop (D4A):** Distance in meters from the population-weighted center of a Census block group to its nearest transit stop.
+
+- **Employment Accessibility by Automobile (D5AR):** Model-based jobs accessible within a 45-minute automobile trip, weighted to give nearer jobs greater influence.
+
+- **Employment Accessibility by Transit (D5BR):** Model-based jobs accessible within the EPA transit travel-time definition, weighted by travel time and based on available transit schedules; not the number of jobs actually obtained.
+
+- **Households (HH):** Total number of households in a Census block group.
+
+- **Households Without a Vehicle (AutoOwn0):** Number of households reporting no vehicle available.
+
+- **Original Census Geographic Identifier (GEOID10):** Census geographic identifier in the source file; this project extract did not preserve its digits reliably, so reconstructed identifiers require independent validation before mapping.
+
+- **Peak-Period Transit Service Frequency (D4C):** Aggregate scheduled transit service per hour during the weekday evening peak, counting qualifying stops within 0.25 miles of the block group boundary.
+
+- **Percentage of Households Without a Vehicle (Pct_AO0):** Share of a Census block group’s households with no vehicle, expressed from 0 to 1 in the data.
+
+- **State Code (STATEFP):** Two-digit Census state code, used to distinguish Nebraska and Iowa records.
+
+- **Tract Code (TRACTCE):** Six-digit Census tract code, combined with state, county, and block group codes to reconstruct geographic identifiers.
+
+- **Transit Service Density (D4D):** Aggregate peak-period transit service frequency divided by block group area, reported per square mile.

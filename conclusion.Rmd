@@ -1,0 +1,21 @@
+---
+title: "Conclusion"
+output: html_document
+date: "2026-11-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Addressing the transit gap is essential for building a more equitable and accessible transportation network in the Omaha-Council Bluffs metropolitan area. Our research confirms that auto dependency across Douglas, Sarpy, and Pottawattamie counties is heavily dictated by built environment indicators, leaving low-income populations in transit-poor neighborhoods disproportionately burdened by vehicle ownership costs. Bridging these spatial disparities requires both targeted policy intervention and actionable analytical tools.
+
+Clustering methodology showed.. **(Adithya)**
+
+Our auto ownership predictions demonstrate that residential density and transit access dominate household vehicle reliance. Compact residential form combined with close proximity to public transit acts as a primary buffer against forced car dependency.  A key finding indicates that local municipalities can achieve meaningful reductions in vehicle ownership by enabling middle housing density at approximately eight units per acre. By reforming restrictive single-family zoning codes and incentivizing moderate-density developments, city planners in Omaha and Council Bluffs can actively lower the compulsory financial burden of auto ownership while expanding the regional housing supply.
+
+Analysis of the second primary driver, transit access, reveals a significant reduction in household vehicle ownership when transit stops are located within 400 meters of a residence. Expanding route coverage or deploying micro-transit feeder systems within this precise 400-meter radius yields the highest return in reducing forced vehicle reliance. Priority corridor investments, such as extending the Metro ORBT Bus Rapid Transit network, can strategically bring underserved neighborhoods within this critical threshold, delivering tangible economic relief to non-driving and transit-dependent households.
+
+Furthermore, spatial analysis of our model's predictions identified critical transit gap areas, most notably a severe "Transit Desert" in mid-city Omaha near 72nd and Center Streets. In this corridor, actual auto reliance vastly exceeds expectations based on land-use features alone, exposing residents to a heavy "car tax" where a disproportionate share of household income is absorbed by auto financing, insurance, and fuel. For regional decision-makers at MAPA and Metro Transit, these transit gaps highlight exactly where infrastructure investments should be targeted to alleviate transportation inequities.
+
+Statistical analysis of the differences between Omaha and Council Bluffs demonstrated… **(Noah)**
