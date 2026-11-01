@@ -1,0 +1,277 @@
+---
+title: "Transit and Employment Accessibility in the Omaha–Council Bluffs Study Region"
+author: "Abhijith Reddy | IDS Team Project"
+date: "October 2026"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      fig.width = 9, fig.height = 5)
+options(scipen = 999)
+```
+
+# Research question and main finding
+
+**Research question:** How does the prevalence of households without a vehicle relate to available transit service and employment accessibility across the three-county Omaha–Council Bluffs study region?
+
+**Main finding:** Among census block groups with usable transit indicators, transit service generally appears concentrated in places where car-free households are more common. However, this overall pattern conceals **47 higher-car-free block groups with comparatively limited modeled transit access to employment**. These are *candidates for further investigation* using current GTFS schedules, ridership, and local transit-service data, rather than confirmed service gaps.
+
+# Methods
+
+## Study area, data source, and preparation
+
+We use the team's filtered EPA Smart Location Database (SLD), version 3 (released in 2021), covering **Douglas and Sarpy counties, Nebraska**, and **Pottawattamie County, Iowa**. The selection includes some places outside Omaha and Council Bluffs municipal limits. The unit of analysis is a **census block group**, not an individual household.
+
+We load the county-filtered CSV, convert key variables to numeric, treat the EPA missing/noncoverage code `-99999` as unavailable (never as numeric zero), and reconstruct **candidate** 12-digit block-group identifiers from separately retained geographic components. The original `GEOID10` and `GEOID20` columns in the supplied export are truncated/rounded; reconstructed IDs must be validated against official boundaries before mapping.
+
+```{r import-clean}
+# Keep the CSV at the repository root (one directory above abhijith).
+paths <- c(
+  "../EPA_SDL_OmahaCouncilBluffs.csv",
+  "EPA_SDL_OmahaCouncilBluffs.csv",
+  "../EPA_SDL_OmahaCouncilBluffs(1).csv",
+  "EPA_SDL_OmahaCouncilBluffs(1).csv"
+)
+available <- paths[file.exists(paths)]
+if (length(available) == 0) {
+  stop("EPA_SDL_OmahaCouncilBluffs.csv not found. Place it in the repository root.")
+}
+
+d <- read.csv(available[1], stringsAsFactors = FALSE,
+              colClasses = c(STATEFP = "character", COUNTYFP = "character",
+                             TRACTCE = "character", BLKGRPCE = "character",
+                             GEOID10 = "character", GEOID20 = "character"))
+stopifnot(nrow(d) > 0, all(c("Pct_AO0", "D4A", "D4C", "D4D", "D5BR", "D5AR", "HH", "AutoOwn0") %in% names(d)))
+
+num_vars <- c("Pct_AO0", "D4A", "D4C", "D4D", "D5BR", "D5AR", "HH", "AutoOwn0")
+for (v in num_vars) {
+  d[[v]] <- as.numeric(d[[v]])
+  d[[v]][d[[v]] == -99999] <- NA_real_
+}
+
+# Uploaded CSV has truncated/rounded GEOID10 and GEOID20 fields.
+# Reconstruct *candidate* 12-character block group IDs from intact components.
+d$block_group_id_reconstructed <- paste0(
+  sprintf("%02d", as.integer(d$STATEFP)),
+  sprintf("%03d", as.integer(d$COUNTYFP)),
+  sprintf("%06d", as.integer(d$TRACTCE)),
+  sprintf("%01d", as.integer(d$BLKGRPCE))
+)
+stopifnot(length(unique(d$block_group_id_reconstructed)) == nrow(d))
+
+d$county <- ifelse(d$STATEFP == "31" & as.integer(d$COUNTYFP) == 55, "Douglas",
+            ifelse(d$STATEFP == "31" & as.integer(d$COUNTYFP) == 153, "Sarpy",
+            ifelse(d$STATEFP == "19" & as.integer(d$COUNTYFP) == 155, "Pottawattamie", NA)))
+stopifnot(!anyNA(d$county))
+d$carfree_pct <- 100 * d$Pct_AO0
+threshold <- as.numeric(quantile(d$Pct_AO0, probs = 0.75, na.rm = TRUE))
+d$higher_carfree <- !is.na(d$Pct_AO0) & d$Pct_AO0 >= threshold
+jobs_median <- median(d$D5BR, na.rm = TRUE)
+d$relative_gap_flag <- d$higher_carfree & !is.na(d$D5BR) & d$D5BR < jobs_median
+```
+
+## Measures and interpretation
+
+| EPA field | What is measured | How it is interpreted |
+|:---|:---|:---|
+| `Pct_AO0` | Share of households with **no vehicle** | A 0–1 proportion; multiplied by 100 to display percent |
+| `D4A` | Network walking distance to the nearest qualifying transit stop (meters) | Lower means closer stop proximity **among observed records** |
+| `D4C` | Aggregate afternoon peak-period transit-service frequency | Higher means more reported service frequency |
+| `D4D` | Transit service-frequency density per square mile | Higher means denser reported service |
+| `D5BR` | Time-decay-weighted employment accessibility by public transit, under EPA's modeled travel assumptions | Higher means greater modeled transit job accessibility; **not** a count of every job directly reachable |
+| `D5AR` | Time-decay-weighted employment accessibility by automobile | Higher means greater modeled access by auto, under a different mode/travel-time model |
+
+Definitions and source conventions follow the EPA Smart Location Database documentation linked in *Sources* below. The automobile and transit job-access measures should **not** be divided to obtain a literal percentage of the same jobs accessible within identical door-to-door trip times.
+
+## Missing-value handling and analytic sample
+
+A `-99999` value is treated as *unavailable* for that indicator. For some variables, it may reflect distance-threshold rules, incomplete GTFS-based transit coverage, or other noncoverage conditions. It is **not** evidence of zero transit service or zero accessible jobs. Each correlation, median, and visualization uses **only valid observations for the indicator involved**; denominators may therefore differ.
+
+In particular, D5BR is measured for just **`r sum(!is.na(d$D5BR))` of `r nrow(d)`** block groups, including only **`r sum(d$county == "Pottawattamie" & !is.na(d$D5BR))` of `r sum(d$county == "Pottawattamie")`** Pottawattamie block groups. **We do not use missing Iowa-side values as zeros or attempt a direct Omaha–Council Bluffs transit-access comparison.** Coverage is reported as a result before any substantive interpretation.
+
+## Associations and group comparison
+
+We calculate **Spearman rank correlations** of zero-vehicle household share (`Pct_AO0`) with each transit or employment-accessibility measure. This describes the direction of a monotonic association among observed block groups, without assuming linearity or establishing causation.
+
+We compare the **observed indicator medians** between (a) block groups at or above the 75th percentile of the full-sample car-free household share and (b) remaining block groups. The **higher-car-free cutoff** is calculated once from all `r nrow(d)` study-area block groups: **`r round(100 * threshold, 2)`%** (the upper quartile). This is a descriptive grouping, not a policy benchmark.
+
+## Relative-gap screening definition
+
+A block group is a *relative transit-employment-access gap candidate* **only if both** of these conditions apply:
+
+1. Its car-free share is **at or above `r round(100 * threshold, 2)`%**, the full-sample upper quartile; and
+2. Its **observed** `D5BR` score is **below `r format(jobs_median, big.mark = ",")`**, the median of available transit-job scores in the study file.
+
+Block groups with missing D5BR are **not screened or flagged as low-access**. The resulting flag is a project-defined, dataset-relative prioritization device, **not an official transit-service or planning standard**; it does not establish service insufficiency or identify a formal transit desert.
+
+# Results
+
+## Figure 1 — Uneven availability of transit indicators
+
+```{r coverage-table}
+counties <- c("Douglas", "Sarpy", "Pottawattamie")
+coverage <- do.call(rbind, lapply(counties, function(nm) {
+  x <- d[d$county == nm, ]
+  data.frame(
+    County = nm,
+    `Block groups` = nrow(x),
+    `D4A valid` = sum(!is.na(x$D4A)),
+    `D4C valid` = sum(!is.na(x$D4C)),
+    `D5BR valid` = sum(!is.na(x$D5BR)),
+    check.names = FALSE
+  )
+}))
+knitr::kable(coverage, caption = "Availability of key transit measures by county")
+```
+
+```{r coverage-figure, echo=FALSE}
+coverage_pct <- rbind(
+  `Transit jobs (D5BR)` = 100 * coverage[["D5BR valid"]] / coverage[["Block groups"]],
+  `Service frequency (D4C)` = 100 * coverage[["D4C valid"]] / coverage[["Block groups"]]
+)
+colnames(coverage_pct) <- coverage$County
+barplot(coverage_pct, beside = TRUE, horiz = TRUE, las = 1,
+        xlim = c(0, 100), xlab = "Usable block-group records (%)",
+        main = "Transit-indicator coverage by county", legend.text = TRUE,
+        args.legend = list(x = "topright", bty = "n", cex = 0.8))
+```
+
+**What the figure shows.** Transit-based indicator coverage differs sharply by county. D5BR is observed for **`r sum(!is.na(d$D5BR))` of `r nrow(d)`** block groups overall, including only **`r sum(d$county == "Pottawattamie" & !is.na(d$D5BR))` of `r sum(d$county == "Pottawattamie")`** in Pottawattamie County. The bars describe *data availability*, **not** the presence or absence of service.
+
+**Why this matters.** A county with fewer reported transit observations should not automatically be described as having worse transit. A comparison based on the available D5BR values would disproportionately represent the Nebraska side.
+
+**Planner use.** Before choosing investment locations or comparing jurisdictions, obtain current, consistent GTFS, service-coverage and ridership information for **both sides** of the metro area, and examine whether omitted block groups are systematically different from observed ones.
+
+## Overall associations: correlation table
+
+```{r correlation-table}
+indicators <- c("D4A", "D4C", "D4D", "D5BR", "D5AR")
+comparison <- do.call(rbind, lapply(indicators, function(var) {
+  valid <- !is.na(d[[var]]) & !is.na(d$Pct_AO0)
+  data.frame(
+    Indicator = var,
+    `Observed n` = sum(valid),
+    `Spearman rho` = round(cor(d$Pct_AO0[valid], d[[var]][valid], method = "spearman"), 3),
+    `Higher-car-free median` = round(median(d[[var]][valid & d$higher_carfree]), 1),
+    `Other median` = round(median(d[[var]][valid & !d$higher_carfree]), 1),
+    check.names = FALSE
+  )
+}))
+knitr::kable(comparison, caption = "Observed associations and group comparisons")
+```
+
+Among measured block groups, car-free share is positively associated with transit-job accessibility (Spearman **ρ = `r round(cor(d$Pct_AO0, d$D5BR, use = "complete.obs", method = "spearman"), 3)`**), positively associated with peak-service frequency (**ρ = `r round(cor(d$Pct_AO0, d$D4C, use = "complete.obs", method = "spearman"), 3)`**), and negatively associated with distance to the nearest qualifying stop (**ρ = `r round(cor(d$Pct_AO0, d$D4A, use = "complete.obs", method = "spearman"), 3)`**; shorter distances are more favorable). These are associations among observed records, not causal effects.
+
+## Figure 2 — Car-free share versus transit access to jobs
+
+```{r transit-jobs-scatter, echo=FALSE}
+valid <- !is.na(d$D5BR)
+plot(d$carfree_pct[valid], d$D5BR[valid], log = "y", pch = 16,
+     col = grDevices::adjustcolor("steelblue", alpha.f = 0.55),
+     xlab = "Households without a car (%)",
+     ylab = "Modeled transit-accessible jobs (log scale)",
+     main = "Car-free share and transit employment accessibility")
+points(d$carfree_pct[d$relative_gap_flag], d$D5BR[d$relative_gap_flag],
+       pch = 16, col = "firebrick", cex = 1.1)
+abline(v = 100 * threshold, lty = 2, col = "grey45")
+abline(h = jobs_median, lty = 2, col = "grey45")
+legend("bottomleft", bty = "n", pch = 16, col = c("steelblue", "firebrick"),
+       legend = c("All measured records", "Relative gap flag"), cex = 0.9)
+```
+
+**What the figure shows.** The overall positive association between car-free share and modeled transit-job accessibility coexists with observations in the lower-right region of the plot: higher-car-free block groups with below-median measured job access. The dashed vertical and horizontal lines show the two *relative* screening thresholds; the vertical axis uses a logarithmic scale.
+
+**Why this matters.** A favorable regional correlation can hide pockets of potential need. Transit proximity or service concentrated in car-free neighborhoods at a regional scale does not guarantee that every such neighborhood can reach many jobs by transit.
+
+**Planner use.** Use the flagged observations as an **initial shortlist** for investigating job destinations, transit route connections, frequency, wait times and transfer burden—then verify with contemporary route and ridership information.
+
+## Figure 3 — Car-free share versus distance to transit stops
+
+```{r distance-scatter, echo=FALSE}
+valid <- !is.na(d$D4A)
+plot(d$carfree_pct[valid], d$D4A[valid], pch = 16,
+     col = grDevices::adjustcolor("steelblue", alpha.f = 0.55),
+     xlab = "Households without a car (%)",
+     ylab = "Walk distance to nearest observed stop (meters)",
+     main = "Car-free share and stop proximity")
+```
+
+**What the figure shows.** Among block groups with an observed D4A value, higher car-free shares generally correspond to shorter walking distances to a qualifying stop (negative Spearman association). Individual block groups vary substantially around that trend.
+
+**Why this matters.** Access to a nearby stop is one part of mobility, but it does **not** measure how often vehicles arrive or which jobs they reach.
+
+**Planner use.** Compare distance-based findings with actual peak and off-peak timetables, safe walking routes, ADA accessibility and bus-stop conditions when prioritizing local improvements.
+
+## Figure 4 — Differences and variation in transit-based employment access
+
+```{r jobs-boxplot, echo=FALSE}
+valid <- !is.na(d$D5BR)
+group <- ifelse(d$higher_carfree[valid], "Higher-car-free", "Other")
+boxplot(d$D5BR[valid] ~ group, outline = FALSE, ylab = "Weighted jobs accessible by transit",
+        main = "Transit job accessibility within measured groups")
+```
+
+**What the figure shows.** The measured higher-car-free group has a median **`r format(round(median(d$D5BR[d$higher_carfree], na.rm = TRUE)), big.mark = ",")`** weighted transit-accessible jobs, compared with **`r format(round(median(d$D5BR[!d$higher_carfree], na.rm = TRUE)), big.mark = ",")`** for the other measured group. Both groups nonetheless show considerable variation. The boxplot suppresses outlier markers for readability but does not exclude those observations from reported statistics.
+
+**Why this matters.** Group averages or medians can obscure within-group differences. The most useful planning targets may be specific places rather than an entire county or group.
+
+**Planner use.** Combine the distribution and the candidate list with local factors such as employment centers, commuting times, equity goals, and neighborhood engagement instead of allocating resources based on one group median.
+
+## Figure 5 — Modeled access to employment: transit and auto
+
+```{r paired-access-plot, echo=FALSE}
+valid <- !is.na(d$D5BR) & !is.na(d$D5AR)
+plot(d$D5AR[valid], d$D5BR[valid], pch = 16,
+     col = grDevices::adjustcolor("steelblue", alpha.f = 0.55),
+     xlab = "Modeled auto-accessible jobs (D5AR)",
+     ylab = "Modeled transit-accessible jobs (D5BR)",
+     main = "Modeled employment accessibility by travel mode")
+```
+
+**What the figure shows.** The plotted block groups have observed values for both modeled automobile (`D5AR`) and public-transit (`D5BR`) job-access indicators. The measures vary across neighborhoods and are calculated under different travel-mode and time-decay assumptions.
+
+**Why this matters.** This is a useful comparative view of **mode-specific accessibility**, but it is **not** a literal share of identical jobs accessible by transit versus car. Treating the plotted values as interchangeable would misstate the results.
+
+**Planner use.** Look for places where transit accessibility merits closer evaluation alongside auto access; use common-origin, current-door-to-door travel-time analyses to make any formal mode-comparison or investment decision.
+
+## Relative-gap screening: 47 candidates
+
+The two-condition screen identifies **`r sum(d$relative_gap_flag)`** block groups among **`r sum(d$higher_carfree & !is.na(d$D5BR))`** higher-car-free block groups with observed transit-job data (**`r round(100 * sum(d$relative_gap_flag) / sum(d$higher_carfree & !is.na(d$D5BR)), 1)`%** of that observed subset). This means **potential relative need**, not proven service inadequacy. The ten candidates with the lowest observed D5BR are listed below; the complete file is `results/relative_gap_candidates.csv`.
+
+```{r candidate-table}
+cols <- c("block_group_id_reconstructed", "county", "carfree_pct", "D5BR", "D4A", "D4C")
+gap <- d[d$relative_gap_flag, cols, drop = FALSE]
+gap <- gap[order(gap$D5BR, -gap$carfree_pct), ]
+show <- head(gap, 10)
+show$carfree_pct <- round(show$carfree_pct, 1)
+show$D4A <- round(show$D4A, 1)
+names(show) <- c("Reconstructed ID", "County", "Car-free %", "Transit jobs", "Stop distance (m)", "Service frequency")
+knitr::kable(show, caption = "Ten relative gap candidates with the lowest observed D5BR")
+```
+
+**Why this matters for planning.** The 47 candidates offer a focused starting point for a finer-grained evaluation that a regional average would miss.
+
+**Recommended next step.** Validate reconstructed census block-group IDs against an official geography file, then cross-check the shortlist with up-to-date GTFS schedules, ridership, travel-time-to-jobs estimates, local service changes and community input. Only after that verification should planners consider route redesign, frequency improvements, stop access or other investments.
+
+# Discussion, limitations, and team integration
+
+**Core interpretation.** Transit service generally appears concentrated in neighborhoods where car-free households are more common **among observed records**, but this pattern hides **47 higher-car-free block groups with comparatively limited modeled transit access to employment**. These locations are candidates for further study, **not confirmed transit deserts**.
+
+- **Uneven and incomplete coverage:** D5BR is observed for only `r sum(!is.na(d$D5BR))` of `r nrow(d)` block groups; only **1 of 93** Pottawattamie observations has a usable D5BR value. Missing Iowa-side values **must not** be interpreted as zero service, and no direct Omaha–Council Bluffs D5BR comparison is warranted.
+- **Historical scope:** EPA SLD v3 is a 2021 release based on historical transit, demographic and employment inputs; findings are **not** a measure of current (2026) transit conditions.
+- **Modeled versus actual experience:** D5BR and D5AR are travel-model measures with different assumptions, not observed commuting outcomes. Service frequency does not capture reliability, fares, transfer quality or traveler needs.
+- **Geography and ID quality:** The three-county area extends beyond city limits. The supplied geographic-ID fields are damaged; reconstructed candidate IDs need external confirmation before geospatial mapping or geographic policy action.
+- **Descriptive—not causal:** Block-group correlations may reflect land use, housing cost, residential sorting, density and many other factors; the analysis does not establish that transit provision causes car ownership patterns.
+
+**Connections to team sections:** Compare the 47 candidate flags with **Adithya's neighborhood archetypes** and **Juicio's vehicle-ownership prediction** to enrich interpretation. **Noah's Omaha/Council Bluffs or Nebraska/Iowa comparison** should explicitly report the coverage imbalance and avoid inferring Iowa transit performance from unavailable GTFS-based scores.
+
+# Sources
+
+- U.S. Environmental Protection Agency, *Smart Location Mapping*: https://www.epa.gov/smartgrowth/smart-location-mapping
+- U.S. Environmental Protection Agency, *Smart Location Database Technical Documentation and User Guide, version 3.0 (2021)*: https://nepis.epa.gov/Exe/ZyPURL.cgi?Dockey=P1014W9I.TXT
+- Project source: `EPA_SDL_OmahaCouncilBluffs.csv` (three-county filtered EPA SLD v3 dataset).

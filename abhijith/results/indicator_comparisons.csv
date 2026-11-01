@@ -1,0 +1,6 @@
+indicator,description,valid_n,spearman_rho,spearman_p,higher_carfree_n,higher_carfree_median,other_n,other_median,unit
+D4A,Walking distance to stop,362,-0.2639266299004162,3.4911742226284455e-07,131,379.54,231,505.6,meters
+D4C,Peak-period transit service frequency,291,0.3344001186634727,4.9414849828684684e-09,105,3.0,186,1.33,frequency
+D4D,Transit frequency density,291,0.37247753662376826,5.22558418106054e-11,105,15.38390564,186,5.3414715555,per sq. mile
+D5BR,Transit-accessible jobs (decay-weighted),362,0.25715364646259486,7.070815598649044e-07,131,29142.0,231,6031.0,weighted jobs
+D5AR,Auto-accessible jobs (decay-weighted),727,0.21750007027625204,3.1148623565440724e-09,182,84132.0,545,75210.0,weighted jobs

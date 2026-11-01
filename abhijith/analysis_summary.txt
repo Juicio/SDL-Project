@@ -1,0 +1,13 @@
+Total block groups: 727
+Car-free household share weighted by households: 6.23%
+Upper quartile car-free threshold (full sample): 8.68%
+Higher-car-free block groups: 182
+Observed transit job accessibility (D5BR): 362
+High-car-free blocks with observed D5BR: 131
+Observed D5BR median (weighted jobs): 9,975
+Relative gap candidates: 47
+Rho Pct_AO0 vs D5BR: 0.257
+Rho Pct_AO0 vs D4C: 0.334
+Rho Pct_AO0 vs D4A: -0.264
+Unique raw GEOID10 values: 3 (unusable for exact block-group mapping)
+Unique reconstructed IDs: 727

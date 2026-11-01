@@ -1,0 +1,23 @@
+Verification report (2026-10-31)
+
+PASS: Original source dataset byte-for-byte matches uploaded EPA_SDL_OmahaCouncilBluffs(1).csv.
+PASS: Python reproduction script executed on the source dataset and regenerated results and figures.
+PASS: 727 block groups, 362 records with usable D5BR, 291 records with usable D4C, 47 relative-gap screening candidates.
+PASS: All five PNG figures open and have valid image data.
+PASS: All four CSV result tables exist and candidate records satisfy the screening rule.
+PASS: Relative figure links in HTML resolve within the extracted project folder.
+PASS: Additional standalone HTML embeds all five PNGs; can be opened without the figures folder.
+STATIC CHECK: R Markdown code chunks and relative input filename present.
+UNVERIFIED: Independent Knit-to-HTML execution from RStudio because R and rmarkdown/knitr are not installed in this environment. Please test Knit in RStudio prior to submitting to your course.
+
+GitHub repository was NOT changed.
+
+Report revision (2026-11-01)
+PASS: R Markdown explicitly separates Methods and Results and retains original analytic calculations.
+PASS: Both HTML reports separate Methods and Results; all five figures have a what/why/planner-use interpretation.
+PASS: Full-sample quartile screen and 47 candidate definitions unchanged; EPA sentinel values not treated as zero.
+PASS: New HTML reports are reproducible by included Python script and standalone images are embedded.
+PASS: Iowa-side D5BR coverage of 1/93 expressly disallows interpreting missingness as no service or a direct city-to-city comparison.
+PASS: Screening caveat updated to 'not an official transit-service or planning standard'.
+UNVERIFIED: RStudio Knit-to-HTML execution; R is not installed in the analysis environment.
+GitHub repository was NOT changed.

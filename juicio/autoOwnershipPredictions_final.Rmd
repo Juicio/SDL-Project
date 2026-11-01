@@ -1,0 +1,536 @@
+---
+title: "Omaha Metro Auto Dependency Analysis"
+author: "Juicio Brennan"
+date: "`r Sys.Date()`"
+header-includes:
+  - \usepackage{titling}
+  - \pretitle{\begin{center}\LARGE\bfseries}
+  - \posttitle{\end{center}\vskip 0.5em}
+  - \preauthor{\begin{center}\large}
+  - \postauthor{\end{center}\vskip 0.5em}
+  - \predate{\begin{center}\large}
+  - \postdate{\end{center}}
+  - \usepackage{caption}
+  - \captionsetup[table]{position=bottom, font=it}
+  - \captionsetup[figure]{font=it}
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+  html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    theme: flatly
+    df_print: paged
+---
+
+
+```{r setup, include=FALSE}
+# Global chunk setup for consistent output and reproducible figures
+knitr::opts_chunk$set(
+  echo = FALSE,          # Show code chunks by default
+  warning = FALSE,      # Suppress warnings in final report
+  message = FALSE,      # Suppress library loading messages
+  fig.align = "center", # Center all plots
+  fig.width = 7,        # Standard plot width
+  fig.height = 4.5       # Standard plot height
+)
+
+# Load core packages required for the project
+library(tidyverse)
+library(knitr)
+```
+
+# Smart Location Database
+
+## Variables
+
+Of the 90 variables in the Smart Location Database, we focus on a subset that is relevant to our analysis of urban equity in the Omaha Metro area. The selected variables are:
+
+- **Distance to Nearest Transit Stop (D4A):** Distance (in meters) from the block group population centroid to the nearest transit stop.
+- **Employment & Housing Mix (D2B_E8MIX):** Balance between housing units and employment opportunities within the block group. Scale: 0 = Pure residential or pure commercial; 1 = Highly balanced mix of jobs and housing.
+- **Gross Employment Density (D1C):** Total jobs per acre of unprotected land. Higher values indicate higher concentrations of employment.
+- **Gross Residential Density (D1A):** Housing units per acre of unprotected land. Higher values indicate denser residential settlement.
+- **Median Household Income (MedIncome):** Census block group median household income in USD.
+- **National Walkability Index (NatWalkInd):** Composite index evaluating overall pedestrian friendliness based on density, diversity, and design. Scale: 1 = Least Walkable (Auto-Dependent Car Suburb); 20 = Most Walkable (Pedestrian-Oriented Urban Core).
+- **Percentage Low-Income Households (Pct_LowInc):** Proportion of households living below the regional low-income threshold.
+- **Street Intersection Density (D3B):** Pedestrian-oriented street grid density (intersections with 3 or more legs per square mile). Scale: Higher values reflect a tighter, more interconnected street grid conducive to walking.
+
+# Methods
+
+## Auto Dependency Predictive Analysis
+
+**Data Pre-Processing**
+
+```{r, echo=FALSE}
+# ==============================================================================
+# EPA Smart Location Database - Preprocessing & Pipeline Setup
+# ==============================================================================
+
+library(tidyverse)
+library(tidymodels)
+library(sf)
+library(data.table)
+library(tigris)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+# Set seed for reproducible splits and cross-validation
+set.seed(402)
+
+# Fetch census block geometries for future code chunks
+options(tigris_use_cache = TRUE)
+
+# Fetch Census Block Groups for both NE and IA, then combine
+omaha_metro_shapes <- map_dfr(c("NE", "IA"), function(st) {
+  block_groups(state = st, year = 2020, cb = TRUE)
+}) %>%
+  filter(
+    (STATEFP == "31" & COUNTYFP %in% c("055", "153")) | # Douglas (055) & Sarpy (153), NE
+    (STATEFP == "19" & COUNTYFP == "155")              # Pottawattamie (155), IA
+  ) %>%
+  select(GEOID)
+# ------------------------------------------------------------------------------
+# 1. Data Loading & Flexible Preprocessing
+# ------------------------------------------------------------------------------
+
+# Read raw dataset
+raw_data <- read_csv("../EPA_SDL_OmahaCouncilBluffs.csv", show_col_types = FALSE)
+
+# Clean and transform features
+clean_data <- raw_data %>%
+  # Filter out non-residential block groups using 'HH' column
+  filter(!is.na(HH) & HH > 0) %>%
+  
+  # Construct clean 12-digit GEOID and grouping variables
+  mutate(
+    STATEFP     = str_pad(as.character(STATEFP), 2, "left", "0"),
+    COUNTYFP    = str_pad(as.character(COUNTYFP), 3, "left", "0"),
+    TRACTCE     = str_pad(as.character(TRACTCE), 6, "left", "0"),
+    BLKGRPCE    = str_pad(as.character(BLKGRPCE), 1, "left", "0"),
+    GEOID       = paste0(STATEFP, COUNTYFP, TRACTCE, BLKGRPCE),
+    Tract_FIPS  = factor(paste0(STATEFP, COUNTYFP, TRACTCE)),
+    County_FIPS = factor(paste0(STATEFP, COUNTYFP))
+  ) %>%
+  
+  # Compute Target Variable: Average Vehicles per Household
+  mutate(
+    Auto0  = coalesce(pick(any_of(c("AutoOwn0", "AUTOOWN0")))[[1]], 0),
+    Auto1  = coalesce(pick(any_of(c("AutoOwn1", "AUTOOWN1")))[[1]], 0),
+    Auto2p = coalesce(pick(any_of(c("AutoOwn2p", "AUTOOWN2P")))[[1]], 0),
+    
+    Avg_Vehicles = ((0 * Auto0) + (1 * Auto1) + (2 * Auto2p)) / HH
+  ) %>%
+  
+  # Recode SLD Sentinels (-99999 / NA) and safe fallback defaults
+  mutate(
+    # Non-serviced transit areas capped at 3,000m walk-shed limit
+    D4A = ifelse(is.na(D4A) | D4A < 0, 3000, D4A),
+    D4D = ifelse(is.na(D4D) | D4D < 0, 0, D4D),
+    
+    NatWalkInd = if ("NatWalkInd" %in% names(.)) NatWalkInd else 1,
+    MedIncome  = if ("MedIncome" %in% names(.)) MedIncome else if ("MEDINCOME" %in% names(.)) MEDINCOME else NA_real_,
+    
+    # Compute Demographic Equity Ratio (No target leakage)
+    Transit_Disparity = MedIncome / (D4A + 1)
+  ) %>%
+  
+  # Select model features, target, and spatial ID keys
+  select(
+    GEOID, Tract_FIPS, County_FIPS,
+    Avg_Vehicles,
+    any_of(c(
+      "D1A", "D1C", "D2A_JENT", "D2B_E8MIX", "D3B", 
+      "D4A", "D4D", "MedIncome", "Pct_LowInc", "NatWalkInd"
+    )),
+    Transit_Disparity
+  )
+
+# ------------------------------------------------------------------------------
+# 2. Train / Test Split & Spatial Group Cross-Validation
+# ------------------------------------------------------------------------------
+
+# Initial 80/20 train/test split stratified by County FIPS
+data_split <- initial_split(clean_data, prop = 0.80, strata = County_FIPS)
+train_data <- training(data_split)
+test_data  <- testing(data_split)
+
+# Spatial Cross-Validation: Group K-Fold by Census Tract (Tract_FIPS)
+# Prevents spatial autocorrelation leakage across adjacent blocks
+spatial_cv_folds <- group_vfold_cv(train_data, group = Tract_FIPS, v = 5)
+
+# ------------------------------------------------------------------------------
+# 3. Feature Engineering Recipe (`tidymodels`)
+# ------------------------------------------------------------------------------
+
+prep_recipe <- recipe(Avg_Vehicles ~ ., data = train_data) %>%
+  # Retain spatial tracking columns as IDs
+  update_role(GEOID, Tract_FIPS, County_FIPS, new_role = "ID") %>%
+  step_impute_median(all_numeric_predictors()) %>%
+  step_nzv(all_numeric_predictors())
+
+# Verify preprocessed structure
+prepped_recipe_fit   <- prep(prep_recipe, training = train_data)
+X_train_preprocessed <- bake(prepped_recipe_fit, new_data = NULL)
+X_test_preprocessed  <- bake(prepped_recipe_fit, new_data = test_data)
+
+#cat("Preprocessing Complete!\n")
+#cat("Training Rows: ", nrow(X_train_preprocessed), "\n")
+#cat("Testing Rows:  ", nrow(X_test_preprocessed), "\n")
+#cat("CV Folds:      ", length(spatial_cv_folds$splits), "\n")
+
+# Preview prepared data structure
+#glimpse(X_train_preprocessed)
+
+```
+
+Data preprocessing began with cleaning, filtering, and recoding attribute data from the Smart Location Database alongside spatial geometries from the U.S. Census Bureau. The target dependent variable for all models was defined as average household vehicle ownership (Avg_Vehicles), measured at the Census Block Group level. The transit proximity variable (D4A), which denotes unserved transit areas, uses negative sentinel values such as "-99999." These were recoded and capped at an upper value of 3,000 meters. This cap preserved the spatial isolation of exurban block groups, while preventing extreme numerical outliers from skewing model splits and distance metrics.
+
+To capture the relationship between household economic status and spatial accessibility, we engineered a custom feature titled Transit_Disparity. Defined as the ratio of median household income to transit distance ($\text{MedIncome} / [\text{D4A} + 1]$), this metric reflects financial leverage relative to physical transit access. All continuous numeric predictors were then normalized by centering to a zero mean and scaling to a unit standard deviation ($\text{mean} = 0$, $\text{standard deviation} = 1$). Scaling parameters were computed strictly within each training fold to prevent data leakage and ensure test-set isolation.
+
+Finally, tabular records were joined to Census Block Group boundaries retrieved dynamically via the tigris R package. The unified dataset was partitioned into an 80/20 train/test split. To address spatial autocorrelation where neighboring block groups share unobserved spatial characteristics, we applied a 5-fold spatial cross-validation scheme to the training set grouped by Census Tract (Tract_FIPS). This structure ensured that validation folds evaluated model performance across distinct geographic neighborhoods rather than randomly sampled adjacent block groups.
+
+**Model Evaluation**
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, results='asis', comment=NA}
+# ==============================================================================
+# Model Specifications & Spatial Cross-Validation Evaluation
+# ==============================================================================
+
+library(ranger)
+library(xgboost)
+
+# 1. Model Engine Specifications
+lm_spec <- linear_reg() %>%
+  set_engine("lm") %>%
+  set_mode("regression")
+
+rf_spec <- rand_forest(mtry = 4, trees = 500, min_n = 5) %>%
+  set_engine("ranger", importance = "impurity") %>%
+  set_mode("regression")
+
+xgb_spec <- boost_tree(trees = 500, tree_depth = 4, learn_rate = 0.05) %>%
+  set_engine("xgboost") %>%
+  set_mode("regression")
+
+# 2. Workflow Set Assembly
+model_workflows <- workflow_set(
+  preproc = list(base_recipe = prep_recipe),
+  models  = list(
+    Linear_Regression = lm_spec,
+    Random_Forest     = rf_spec,
+    XGBoost           = xgb_spec
+  ),
+  cross = TRUE
+)
+
+# 3. Fit Across Spatial CV Folds
+eval_metrics <- metric_set(rmse, mae, rsq)
+
+cv_results <- model_workflows %>%
+  workflow_map(
+    fn = "fit_resamples",
+    resamples = spatial_cv_folds,
+    metrics = eval_metrics,
+    control = control_resamples(save_pred = TRUE)
+  )
+
+# 4. Summarize Performance Rankings
+model_performance <- rank_results(cv_results, rank_metric = "rmse", select_best = TRUE) %>%
+  select(wflow_id, .metric, mean, std_err) %>%
+  pivot_wider(names_from = .metric, values_from = c(mean, std_err))
+
+# Clean and format model evaluation results for academic report
+performance_table <- model_performance %>%
+  mutate(
+    Model = case_when(
+      stringr::str_detect(wflow_id, "Random_Forest")     ~ "Random Forest",
+      stringr::str_detect(wflow_id, "Linear_Regression") ~ "Linear Regression",
+      stringr::str_detect(wflow_id, "XGBoost")           ~ "XGBoost",
+      TRUE ~ wflow_id
+    )
+  ) %>%
+  # Select and arrange the exact requested columns
+  select(
+    Model,
+    RMSE = mean_rmse,
+    `R²`  = mean_rsq,
+    MAE  = mean_mae
+  ) %>%
+  # Format metrics to 3 decimal places for academic reporting
+  mutate(
+    RMSE = sprintf("%.3f", RMSE),
+    `R²`  = sprintf("%.3f", `R²`),
+    MAE  = sprintf("%.3f", MAE)
+  ) %>%
+  arrange(RMSE)
+
+# Display formatted table in Markdown output
+#knitr::kable(
+#  performance_table,
+#  caption = "The final evaluation metrics of the three trained models.",
+#  align = c("l", "c", "c", "c")
+#)
+
+# Generate raw latex tabular
+tab_latex <- knitr::kable(
+  performance_table,
+  format = "latex",
+  booktabs = TRUE,
+  align = c("l", "c", "c", "c")
+)
+
+# Print clean LaTeX table float with caption positioned strictly at the bottom
+cat(
+  "\\begin{table}[h]\n",
+  "\\centering\n",
+  as.character(tab_latex), "\n",
+  "\\caption{The final evaluation metrics of the three trained models.}\n",
+  "\\end{table}\n"
+)
+
+```
+
+To evaluate predictive performance, three distinct regression models were trained and compared: 1) Ordinary Least Squares Linear Regression; 2) Random Forest ensemble; 3) Gradient Boosted Decision Tree ensemble. The R-packages lm, ranger, and xgboost were used, respectively. The Random Forest was parameterized with 500 trees, an explicit node complexity threshold, and a subset of 4 predictor variables randomly sampled at each split. The Gradient Boosted model was configured with 500 trees, a maximum tree depth of 4, and a conservative learning rate of 0.05 to prevent overfitting.
+
+Model evaluation was done using a 5-fold spatial cross-validation method to measure generalizability while keeping out geographically distinct census tracts. The Out-of-Folds predictions were scored using three metrics: Root Mean Squared Error (RMSE), Mean Absolute Error (MAE), and Coefficient of Determination ($R^2$). (Table 1) 
+
+The Random Forest model demonstrated the strongest generalization across all metrics. It achieved the lowest RMSE (0.215), highest mean $R^2$ (0.402), and the lowest MAE of (0.165). Consequently, the Random Forest architecture was selected as the final candidate model.
+
+**Final Training and Feature Importance Assessment**
+
+The Random Forest pipeline was extracted and retrained on the complete 80% training dataset. This final model was then applied to the held-out 20% testing dataset. Predictive performance was measured using the same primary evaluation metrics: RMSE (0.212), $R^2$ (0.374), and MAE (0.168).
+
+In order to analyze the underlying drivers of household vehicle ownership, feature importance metrics were extracted from the fitted Random Forest model. Importance was quantified using total Gini node impurity reduction. This measures how consistently each predictor contributed to reducing variance across all tree splits in the ensemble.
+
+# Results
+
+## Auto Dependency Predictive Analysis
+
+In the Omaha-Council Bluffs area, sprawling land-use patterns have historically made personal vehicles the primary, if not sole, pathway to regional opportunity. By modeling expected household vehicle counts as a function of walkability, density, street connectivity, and transit proximity, this study establishes a quantitative baseline for what a neighborhood's auto reliance should look like based on its physical and economic characteristics.
+
+```{r, echo=FALSE, fig.cap="Feature importance scores based on Gini impurity reduction, highlighting the primary drivers of predicted household vehicle ownership."}
+# ==============================================================================
+# Final Model Evaluation & Variable Importance
+# ==============================================================================
+
+# Target the winning model ID from rank_results
+best_wflow_id <- "base_recipe_Random_Forest"
+
+winning_workflow <- cv_results %>%
+  extract_workflow(best_wflow_id)
+
+# Fit winning Random Forest on 80% train and evaluate on 20% test
+final_fit <- last_fit(winning_workflow, split = data_split, metrics = eval_metrics)
+
+#cat("--------------------------------------------------\n")
+#cat("FINAL TEST SET PERFORMANCE (Held-out 20% Data)\n")
+#cat("--------------------------------------------------\n")
+#collect_metrics(final_fit) %>%
+#  select(.metric, .estimate) %>%
+#  print()
+
+
+# ------------------------------------------------------------------------------
+# 2. Extract and Plot Feature Importance with Descriptive Labels
+# ------------------------------------------------------------------------------
+
+# Define plain-English lookup dictionary for EPA SLD variable codes
+variable_labels <- c(
+  "D1A"               = "Gross Residential Density",
+  "D1C"               = "Gross Employment Density",
+  "D2A_JENT"          = "Jobs Entropy / Diversity",
+  "D2B_E8MIX"         = "Employment & Housing Mix",
+  "D3B"               = "Street Intersection Density",
+  "D4A"               = "Distance to Nearest Transit Stop",
+  "D4D"               = "Transit Service Frequency",
+  "NatWalkInd"        = "National Walkability Index",
+  "MedIncome"         = "Median Household Income",
+  "Pct_LowInc"        = "Percentage Low-Income Households",
+  "Transit_Disparity" = "Income to Transit Distance Ratio"
+)
+
+# Extract Random Forest feature importance
+rf_fit_engine <- extract_fit_engine(final_fit)
+
+importance_df <- tibble(
+  Feature    = names(rf_fit_engine$variable.importance),
+  Importance = rf_fit_engine$variable.importance
+) %>%
+  # Map codes to plain-English labels (fallback to original code if missing)
+  mutate(Feature_Label = coalesce(variable_labels[Feature], Feature))
+
+# Render plot with plain-English labels
+importance_df %>%
+  slice_max(Importance, n = 12) %>%
+  ggplot(aes(x = reorder(Feature_Label, Importance), y = Importance)) +
+  geom_col(fill = "#2b5c8f", width = 0.6) +
+  geom_text(aes(label = round(Importance, 2)), hjust = -0.2, color = "#333333", size = 3.5) +
+  coord_flip(ylim = c(0, 11)) +
+  labs(
+    title    = "Predictors of Household Auto Ownership",
+    x        = NULL,
+    y        = "Relative Predictive Power (Node Impurity)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title       = element_text(face = "bold", size = 13),
+    panel.grid.minor = element_blank(),
+    axis.text.y      = element_text(face = "bold")
+  )
+```
+
+The feature importance evaluation shows that residential density and transit access dominate the prediction of household auto ownership (Figure AA). Leading the rankings are Gross Residential Density (9.88) and Distance to Nearest Transit Stop (9.67) that together exert a higher influence on household vehicle decisions than the other features. This demonstrates that compact residential clustering combined with physical proximity to public transit acts as the fundamental barrier to car dependency. When neighborhoods lack sufficient residential concentration or require long walks to reach transit, households are compelled to own vehicles.
+
+Pedestrian network connectivity and destination land-use form a second tier of predictive influence. National Walkability Index (5.96), Gross Employment Density (5.19), Street Intersection Density (4.26), Transit Service Frequency (4.16), and Employment & Housing Mix (3.58) shows how local destination impact vehicle reliance. Higher employment density and mixed-use land development allow people to fulfill daily needs locally without relying on their own automobiles. Well-connected street grids with frequent intersection density allow more pedestrian pathways to nearby stops and commerce. 
+
+Rather than treating auto ownership as a consumer choice driven by income, the model demonstrates that housing density and transit proximity are the key drivers governing regional mobility. By strategically aligning these two features, the local municipalities can lower the forced economic burden of household vehicle ownership and advance urban equity.
+
+```{r, echo=FALSE, fig.cap="Spatial mapping of the Car Ownership Gap across the Omaha-Council Bluffs metropolitan region, identifying mismatches between predicted and actual household vehicle reliance."}
+# ==============================================================================
+# Full Metropolitan Spatial Prediction Map
+# ==============================================================================
+
+# Generate predictions across full dataset with explicit GEOID key
+full_residuals_df <- clean_data %>%
+  bind_cols(predict(extract_workflow(final_fit), clean_data)) %>%
+  rename(Predicted = .pred) %>%
+  mutate(Residual = Avg_Vehicles - Predicted)
+
+# Spatial join with Census block group geometries
+spatial_residuals_full <- omaha_metro_shapes %>%
+  st_transform(crs = 4326) %>%
+  inner_join(full_residuals_df, by = "GEOID")
+
+# Calculate symmetric limit for clean zero-centered fill scale
+max_val <- max(abs(spatial_residuals_full$Residual), na.rm = TRUE)
+
+# Calculate dynamic break points that fall safely inside the fill limits
+break_val <- floor(max_val * 10) / 10
+
+# Render static spatial residual map zoomed in on the metro core
+ggplot(spatial_residuals_full) +
+  geom_sf(aes(fill = Residual), color = "#666666", size = 0.08) +
+  scale_fill_gradient2(
+    low      = "#2e7d32", # Green (Fewer cars than expected)
+    mid      = "#ffffff", # White (Matches expectation)
+    high     = "#c62828", # Red (More cars than expected)
+    midpoint = 0,
+    limits   = c(-max_val, max_val),
+    breaks   = c(-break_val, 0, break_val),
+    labels   = c("Fewer cars than expected", "Matches expectation", "More cars than expected"),
+    name     = "Car Ownership Gap"
+  ) +
+  # Zoom directly into the urban metro area (adjust lat/long limits if needed)
+  coord_sf(
+    xlim = c(-96.25, -95.80), 
+    ylim = c(41.10, 41.38), 
+    expand = FALSE
+  ) +
+  labs(
+    title    = "Where Car Ownership Differs from Neighborhood Expectations\n",
+    caption  = "Source: EPA Smart Location Database & US Census Bureau (2020)"
+  ) +
+  theme_void(base_size = 11) +
+  theme(
+    plot.title      = element_text(face = "bold", size = 12, hjust = 0.5),
+    plot.subtitle   = element_text(size = 9.5, color = "#444444", hjust = 0.5, margin = margin(b = 10)),
+    plot.caption    = element_text(size = 8, color = "#666666", hjust = 0.5, margin = margin(t = 8)),
+    legend.title    = element_text(size = 9, face = "bold"),
+    legend.text     = element_text(size = 8),
+    legend.position = "right"
+  )
+
+```
+
+The spatial residual map visualizes where actual household auto ownership diverges from model predictions across the Omaha-Council Bluffs metro (Figure BB). This map illustrates the "Car Ownership Gap." The green blocks show where there are fewer cars than expected. These communities have households that own fewer personal vehicles than predicted based on local density, walkability, and income. The white blocks are those that matched expectations where ownership aligns with demographic and environmental variables. The red blocks indicate there are more cars than expected. These areas are where household own more personal vehicles than predicted. In neighborhoods with low transit availability, this reflects forced auto ownership where families must maintain multiple vehicles despite financial strain.
+
+Green blocks dominate East and Central Omaha, including Midtown, Downtown, and the Creighton/UNMC district, which are located along the Dodge and Pacific Street corridors. High residential density, grid connectivity, and active transit routes (including ORBT) allow residents to comfortably maintain zero or single-vehicle households.
+
+Westward towards 90th Street and Sarpy County, the suburban transition shows blocks changing to white and pale red colors. Single-family residential zoning and cul-de-sac street layouts make automobile reliance the expected default.
+
+The "Transit Desert" of Omaha resides in Mid-City along the Center Street Corridor. The prominent cluster of deep red occurs around 72nd Street and Center Street. This area represents the metro’s primary transit gap. While surrounded by commercial areas, the neighborhood suffers from isolation relative to transit networks. Because auto reliance here vastly exceeds neighborhood expectations, residents face a compulsory "car tax" where they spend a disproportionate share of household income on auto financing, insurance, and fuel simply to commute to work and access basic goods.
+
+For regional decision makers, this map indicates that transit funding should target the high need corridors, such as around 72nd and Center Streets, where actual car ownership exceed expectations. 
+
+```{r, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on gross residential density (housing units/acre), identifying a key tipping point between 4 and 7.5 units per acre."}
+# ==============================================================================
+# Helper Function & Generation of Diagnostic Partial Dependence Plots (PDP)
+# Random Forest Model Engine
+# ==============================================================================
+
+fitted_wf <- extract_workflow(final_fit)
+
+# Standard PDP helper function
+generate_pdp <- function(data, var_name, grid_length = 20) {
+  var_vals <- data[[var_name]]
+  grid_seq <- seq(min(var_vals, na.rm = TRUE), max(var_vals, na.rm = TRUE), length.out = grid_length)
+  
+  map_dfr(grid_seq, function(val) {
+    temp_df <- data
+    temp_df[[var_name]] <- val
+    preds <- predict(fitted_wf, new_data = temp_df)$.pred
+    tibble(var_val = val, yhat = mean(preds, na.rm = TRUE))
+  })
+}
+
+# ------------------------------------------------------------------------------
+# 1. PDP: Gross Residential Density (D1A) - [Top Predictor]
+# ------------------------------------------------------------------------------
+pdp_d1a <- generate_pdp(train_data, "D1A")
+
+ggplot(pdp_d1a, aes(x = var_val, y = yhat)) +
+  geom_line(color = "#2b5c8f", linewidth = 1.3) +
+  geom_point(color = "#2b5c8f", size = 3) +
+  labs(
+    title    = "Partial Dependence of Gross Residential Density",
+    x        = "Gross Residential Density (Housing Units / Acre)",
+    y        = "Predicted Avg Vehicles per Household"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title       = element_text(face = "bold", size = 14),
+    panel.grid.minor = element_blank()
+  )
+```
+
+For the driving feature of Gross Residential Density, the Partial Dependence Plot illustrates how residential layout affects household auto reliance (Figure CC). Across low-density suburban and exurban environments (<3.5 housing units per acre), predicted vehicle ownership remains high. In these typical single-family residential developments, which are common to West Omaha, Bellevue, and Sarpy, low residential concentrations require auto dependency due to the distance of daily destinations.
+
+The most interesting aspect of the plot occurs between approximately 4 and 7.5 housing units per acre. At this point, predicted vehicle ownership drops significantly from 1.55 down to 1.25 vehicles per household. 
+
+Across a standard block group of 500 households, the decline of about 0.30 vehicles per household removes roughly 150 personal automobiles from the local transportation network, which has a significant impacts including on traffic and pollution. 
+
+This range corresponds to middle-density neighborhoods such as multi-family town homes, small apartment groups, and historic urban districts. The curve plateaus around 1.25 vehicles before moving downward again in high-density urban neighborhoods.
+
+For regional planners, these finding provide a policy target for housing strategy. Rather than requiring high density high-rises to curtail automobile reliance, local municipalities can achieve significant reductions in auto dependency by enabling middle housing density at around 8 units per acre. By reforming restrictive single-family zoning codes and incentivizing moderate density developments, city planners in Omaha and Council Bluffs can actively lower the compulsory burden of car ownership, offering households genuine transportation flexibility while expanding regional housing supply.   
+
+```{r, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on distance to nearest transit stop (meters), identifying a key tipping point between 400 and 800 meters."}
+# ------------------------------------------------------------------------------
+# 2. PDP: Transit Stop Proximity (D4A) - [Second Top Predictor]
+# ------------------------------------------------------------------------------
+pdp_d4a <- generate_pdp(train_data, "D4A")
+
+ggplot(pdp_d4a, aes(x = var_val, y = yhat)) +
+  geom_line(color = "#2b5c8f", linewidth = 1.3) +
+  geom_point(color = "#2b5c8f", size = 3) +
+  scale_x_continuous(labels = scales::label_comma(), breaks = seq(0, 3000, by = 500)) +
+  labs(
+    title    = "Partial Dependence of Distance to Nearest Transit Stop",
+    x        = "Distance to Nearest Transit Stop (Meters)",
+    y        = "Predicted Avg Vehicles per Household"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title       = element_text(face = "bold", size = 14),
+    panel.grid.minor = element_blank()
+  )
+```
+
+For the second driving feature of Distance to Nearest Transit Stop, the Partial Dependence Plot shows a sharp incline at 500 meters (Figure DD). 400 meters, or roughly 0.25 miles, represents a standard 5-minute walking distance. At this range and lower, predicted auto ownership reaches its lowest levels at around 1.38 to 1.42 vehicles per household. The sharp upward trajectory immediately following marks a behavioral threshold where the physical distance exceeds a pedestrian's walking tolerance. This climb plateaus around 1.58 vehicles per household. In these transit-isolated environments, typical of exurban neighborhoods, public transit stops being a reasonable commuting option and forces complete auto reliance.
+
+Since the behavioral shift away from vehicle reliance occurs almost exclusively within the 400 to 800 meter range, expanding route coverage or micro-transit feeder systems within this precise radius yields the highest dividend in reducing forced car ownership. Priority corridor investments, such as extending the ORBT network, can strategically pull underserved neighborhoods back under the critical 400-meter threshold, offering residents tangible economic relief from compulsory vehicle ownership.
+
+
