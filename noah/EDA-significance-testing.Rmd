@@ -530,13 +530,3 @@ Evaluating walking distance to transit stops alongside job reach demonstrates th
 
 # 4 Limitations 
 The distance-to-transit-stop variable (D4A) was assigned an artificial upper threshold of 3,000 meters in the source dataset. While this cap limits distortion from extreme rural outliers, it potentially masks the true degree of physical isolation experienced by households situated beyond that perimeter. Similarly, the 45-minute commute window (D5CR, D5AR) applies a fixed ceiling that may not reflect the reality of Council Bluffs residents who must undertake daily interstate commutes well beyond 45 minutes to reach regional employment centers.
-
-# 5 Reproduction
-
-To reproduce this analysis and generate all figures and statistical tables:
-
-1.  Ensure the raw EPA data file `EPA_SDL_OmahaCouncilBluffs.csv` is located in the working directory.
-2.  Open this `.Rmd` file in RStudio or an active R session.
-3.  Run the following command in the R console:
-
-\`\`\`r rmarkdown::render("Final_council_bluffs_vs_omaha.Rmd")
