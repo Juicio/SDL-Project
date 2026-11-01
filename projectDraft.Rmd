@@ -10,6 +10,9 @@ header-includes:
   - \postauthor{\end{center}\vskip 0.5em}
   - \predate{\begin{center}\large}
   - \postdate{\end{center}}
+  - \usepackage{caption}
+  - \captionsetup[table]{position=bottom, font=it}
+  - \captionsetup[figure]{font=it}
 bibliography: references.bib
 csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa.csl
 output:
@@ -36,7 +39,7 @@ abstract: |
 ```{r setup, include=FALSE}
 # Global chunk setup for consistent output and reproducible figures
 knitr::opts_chunk$set(
-  echo = TRUE,          # Show code chunks by default
+  echo = FALSE,          # Show code chunks by default
   warning = FALSE,      # Suppress warnings in final report
   message = FALSE,      # Suppress library loading messages
   fig.align = "center", # Center all plots
