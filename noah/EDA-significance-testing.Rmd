@@ -66,8 +66,13 @@ ia_blocks <- block_groups(state = "IA", county = "Pottawattamie", year = 2010, c
 metro_shapes <- rbind(ne_blocks, ia_blocks) %>%
   mutate(GEOID12 = str_extract(as.character(GEO_ID), "\\d{12}$"))
 
-sld_raw <- fread("EPA_SDL_OmahaCouncilBluffs.csv")
+csv_file <- if (file.exists("EPA_SDL_OmahaCouncilBluffs.csv")) {
+  "EPA_SDL_OmahaCouncilBluffs.csv"
+} else {
+  "../EPA_SDL_OmahaCouncilBluffs.csv"
+}
 
+sld_raw <- fread(csv_file)
 sld_clean <- sld_raw %>%
   mutate(
     GEOID12 = paste0(
@@ -310,7 +315,8 @@ ia_blocks <- block_groups(state = "IA", county = "Pottawattamie", year = 2010, c
 metro_shapes <- rbind(ne_blocks, ia_blocks) %>%
   mutate(GEOID12 = str_extract(as.character(GEO_ID), "\\d{12}$"))
 
-sld_raw <- fread("EPA_SDL_OmahaCouncilBluffs.csv")
+
+sld_raw <- fread("../EPA_SDL_OmahaCouncilBluffs.csv")
 
 sld_clean <- sld_raw %>%
   mutate(
