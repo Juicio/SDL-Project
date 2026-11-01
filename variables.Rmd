@@ -1,0 +1,21 @@
+---
+title: "Variables"
+output: html_document
+date: "2026-11-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The SLD is a rich dataset of 90 unique features. We focus on a subset that is relevant to our analysis of urban equity in the Omaha-Council Bluffs Metro area. The utilized variables are:
+
+- **Census Block Group Identifier (GEOID):** A unique 12-digit Federal Information Processing Series (FIPS) code that uniquely identifies each Census Block Group nationwide.
+- **Distance to Nearest Transit Stop (D4A):** Distance (in meters) from the block group population centroid to the nearest transit stop.
+- **Employment & Housing Mix (D2B_E8MIX):** Balance between housing units and employment opportunities within the block group. Scale: 0 = Pure residential or pure commercial; 1 = Highly balanced mix of jobs and housing.
+- **Gross Employment Density (D1C):** Total jobs per acre of unprotected land. Higher values indicate higher concentrations of employment.
+- **Gross Residential Density (D1A):** Housing units per acre of unprotected land. Higher values indicate denser residential settlement.
+- **Median Household Income (MedIncome):** Census block group median household income in USD.
+- **National Walkability Index (NatWalkInd):** Composite index evaluating overall pedestrian friendliness based on density, diversity, and design. Scale: 1 = Least Walkable (Auto-Dependent Car Suburb); 20 = Most Walkable (Pedestrian-Oriented Urban Core).
+- **Percentage Low-Income Households (Pct_LowInc):** Proportion of households living below the regional low-income threshold.
+- **Street Intersection Density (D3B):** Pedestrian-oriented street grid density (intersections with 3 or more legs per square mile). Scale: Higher values reflect a tighter, more interconnected street grid conducive to walking.

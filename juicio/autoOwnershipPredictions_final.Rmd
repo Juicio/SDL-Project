@@ -1,6 +1,5 @@
 ---
 title: "Omaha Metro Auto Dependency Analysis"
-author: "Juicio Brennan"
 date: "`r Sys.Date()`"
 header-includes:
   - \usepackage{titling}
@@ -14,11 +13,11 @@ header-includes:
   - \captionsetup[table]{position=bottom, font=it}
   - \captionsetup[figure]{font=it}
 output:
-  pdf_document:
+  bookdown::pdf_document2:
     toc: true
     toc_depth: 2
     number_sections: true
-  html_document:
+  bookdown::html_document2:
     toc: true
     toc_depth: 2
     number_sections: true
@@ -47,8 +46,9 @@ library(knitr)
 
 ## Variables
 
-Of the 90 variables in the Smart Location Database, we focus on a subset that is relevant to our analysis of urban equity in the Omaha Metro area. The selected variables are:
+The SLD is a rich dataset of 90 unique features. We focus on a subset that is relevant to our analysis of urban equity in the Omaha-Council Bluffs Metro area. The utilized variables are:
 
+- **Census Block Group Identifier (GEOID):** A unique 12-digit Federal Information Processing Series (FIPS) code that uniquely identifies each Census Block Group nationwide.
 - **Distance to Nearest Transit Stop (D4A):** Distance (in meters) from the block group population centroid to the nearest transit stop.
 - **Employment & Housing Mix (D2B_E8MIX):** Balance between housing units and employment opportunities within the block group. Scale: 0 = Pure residential or pure commercial; 1 = Highly balanced mix of jobs and housing.
 - **Gross Employment Density (D1C):** Total jobs per acre of unprotected land. Higher values indicate higher concentrations of employment.
@@ -60,7 +60,7 @@ Of the 90 variables in the Smart Location Database, we focus on a subset that is
 
 # Methods
 
-## Auto Dependency Predictive Analysis
+## Auto Dependency Prediction and Evaluation
 
 **Data Pre-Processing**
 
@@ -195,7 +195,7 @@ Finally, tabular records were joined to Census Block Group boundaries retrieved 
 
 **Model Evaluation**
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE, results='asis', comment=NA}
+```{r eval-metrics, echo=FALSE, message=FALSE, warning=FALSE}
 # ==============================================================================
 # Model Specifications & Spatial Cross-Validation Evaluation
 # ==============================================================================
@@ -243,7 +243,7 @@ model_performance <- rank_results(cv_results, rank_metric = "rmse", select_best 
   select(wflow_id, .metric, mean, std_err) %>%
   pivot_wider(names_from = .metric, values_from = c(mean, std_err))
 
-# Clean and format model evaluation results for academic report
+# Clean and format model evaluation results
 performance_table <- model_performance %>%
   mutate(
     Model = case_when(
@@ -253,50 +253,30 @@ performance_table <- model_performance %>%
       TRUE ~ wflow_id
     )
   ) %>%
-  # Select and arrange the exact requested columns
   select(
     Model,
     RMSE = mean_rmse,
-    `R²`  = mean_rsq,
+    R2   = mean_rsq,
     MAE  = mean_mae
   ) %>%
-  # Format metrics to 3 decimal places for academic reporting
   mutate(
     RMSE = sprintf("%.3f", RMSE),
-    `R²`  = sprintf("%.3f", `R²`),
+    R2   = sprintf("%.3f", R2),
     MAE  = sprintf("%.3f", MAE)
   ) %>%
   arrange(RMSE)
 
-# Display formatted table in Markdown output
-#knitr::kable(
-#  performance_table,
-#  caption = "The final evaluation metrics of the three trained models.",
-#  align = c("l", "c", "c", "c")
-#)
-
-# Generate raw latex tabular
-tab_latex <- knitr::kable(
+# Basic kable call with caption attached
+knitr::kable(
   performance_table,
-  format = "latex",
-  booktabs = TRUE,
+  caption = "The final evaluation metrics of the three trained models.",
   align = c("l", "c", "c", "c")
 )
-
-# Print clean LaTeX table float with caption positioned strictly at the bottom
-cat(
-  "\\begin{table}[h]\n",
-  "\\centering\n",
-  as.character(tab_latex), "\n",
-  "\\caption{The final evaluation metrics of the three trained models.}\n",
-  "\\end{table}\n"
-)
-
 ```
 
 To evaluate predictive performance, three distinct regression models were trained and compared: 1) Ordinary Least Squares Linear Regression; 2) Random Forest ensemble; 3) Gradient Boosted Decision Tree ensemble. The R-packages lm, ranger, and xgboost were used, respectively. The Random Forest was parameterized with 500 trees, an explicit node complexity threshold, and a subset of 4 predictor variables randomly sampled at each split. The Gradient Boosted model was configured with 500 trees, a maximum tree depth of 4, and a conservative learning rate of 0.05 to prevent overfitting.
 
-Model evaluation was done using a 5-fold spatial cross-validation method to measure generalizability while keeping out geographically distinct census tracts. The Out-of-Folds predictions were scored using three metrics: Root Mean Squared Error (RMSE), Mean Absolute Error (MAE), and Coefficient of Determination ($R^2$). (Table 1) 
+Model evaluation was done using a 5-fold spatial cross-validation method to measure generalizability while keeping out geographically distinct census tracts. The Out-of-Folds predictions were scored using three metrics: Root Mean Squared Error (RMSE), Mean Absolute Error (MAE), and Coefficient of Determination ($R^2$). (Table \@ref(tab:eval-metrics)) 
 
 The Random Forest model demonstrated the strongest generalization across all metrics. It achieved the lowest RMSE (0.215), highest mean $R^2$ (0.402), and the lowest MAE of (0.165). Consequently, the Random Forest architecture was selected as the final candidate model.
 
@@ -310,9 +290,9 @@ In order to analyze the underlying drivers of household vehicle ownership, featu
 
 ## Auto Dependency Predictive Analysis
 
-In the Omaha-Council Bluffs area, sprawling land-use patterns have historically made personal vehicles the primary, if not sole, pathway to regional opportunity. By modeling expected household vehicle counts as a function of walkability, density, street connectivity, and transit proximity, this study establishes a quantitative baseline for what a neighborhood's auto reliance should look like based on its physical and economic characteristics.
+In the Omaha-Council Bluffs area, sprawling land-use patterns have historically made personal vehicles the primary, if not sole, pathway to regional opportunity. By modeling expected household vehicle counts as a function of walkability, density, street connectivity, and transit proximity, this analysis establishes a quantitative baseline for what a neighborhood's auto reliance should look like based on its physical and economic characteristics.
 
-```{r, echo=FALSE, fig.cap="Feature importance scores based on Gini impurity reduction, highlighting the primary drivers of predicted household vehicle ownership."}
+```{r ownership-drivers, echo=FALSE, fig.cap="Feature importance scores based on Gini impurity reduction, highlighting the primary drivers of predicted household vehicle ownership."}
 # ==============================================================================
 # Final Model Evaluation & Variable Importance
 # ==============================================================================
@@ -383,13 +363,13 @@ importance_df %>%
   )
 ```
 
-The feature importance evaluation shows that residential density and transit access dominate the prediction of household auto ownership (Figure AA). Leading the rankings are Gross Residential Density (9.88) and Distance to Nearest Transit Stop (9.67) that together exert a higher influence on household vehicle decisions than the other features. This demonstrates that compact residential clustering combined with physical proximity to public transit acts as the fundamental barrier to car dependency. When neighborhoods lack sufficient residential concentration or require long walks to reach transit, households are compelled to own vehicles.
+Understanding the primary drivers of auto ownership in the Metro area is a key step to identify why people require automobiles and plan metropolitan strategies. The feature importance evaluation shows that residential density and transit access dominate the prediction of household auto ownership (Figure \@ref(fig:ownership-drivers)). Leading the rankings are Gross Residential Density (9.88) and Distance to Nearest Transit Stop (9.67) that together exert a higher influence on household vehicle decisions than the other features. This demonstrates that compact residential clustering combined with physical proximity to public transit acts as the fundamental barrier to car dependency. When neighborhoods lack sufficient residential concentration or require long walks to reach transit, households are compelled to own vehicles.
 
 Pedestrian network connectivity and destination land-use form a second tier of predictive influence. National Walkability Index (5.96), Gross Employment Density (5.19), Street Intersection Density (4.26), Transit Service Frequency (4.16), and Employment & Housing Mix (3.58) shows how local destination impact vehicle reliance. Higher employment density and mixed-use land development allow people to fulfill daily needs locally without relying on their own automobiles. Well-connected street grids with frequent intersection density allow more pedestrian pathways to nearby stops and commerce. 
 
 Rather than treating auto ownership as a consumer choice driven by income, the model demonstrates that housing density and transit proximity are the key drivers governing regional mobility. By strategically aligning these two features, the local municipalities can lower the forced economic burden of household vehicle ownership and advance urban equity.
 
-```{r, echo=FALSE, fig.cap="Spatial mapping of the Car Ownership Gap across the Omaha-Council Bluffs metropolitan region, identifying mismatches between predicted and actual household vehicle reliance."}
+```{r spatial-map-ownership, echo=FALSE, fig.cap="Spatial mapping of the Car Ownership Gap across the Omaha-Council Bluffs metropolitan region, identifying mismatches between predicted and actual household vehicle reliance."}
 # ==============================================================================
 # Full Metropolitan Spatial Prediction Map
 # ==============================================================================
@@ -446,7 +426,7 @@ ggplot(spatial_residuals_full) +
 
 ```
 
-The spatial residual map visualizes where actual household auto ownership diverges from model predictions across the Omaha-Council Bluffs metro (Figure BB). This map illustrates the "Car Ownership Gap." The green blocks show where there are fewer cars than expected. These communities have households that own fewer personal vehicles than predicted based on local density, walkability, and income. The white blocks are those that matched expectations where ownership aligns with demographic and environmental variables. The red blocks indicate there are more cars than expected. These areas are where household own more personal vehicles than predicted. In neighborhoods with low transit availability, this reflects forced auto ownership where families must maintain multiple vehicles despite financial strain.
+Identifying "Transit Deserts" where people are required to own vehicles is important to understand the transit gap in the Metro and align strategic planning to advance urban equity. The spatial residual map visualizes where actual household auto ownership diverges from model predictions across the Omaha-Council Bluffs metro (Figure \@ref(fig:spatial-map-ownership)). This map illustrates the "Car Ownership Gap." The green blocks show where there are fewer cars than expected. These communities have households that own fewer personal vehicles than predicted based on local density, walkability, and income. The white blocks are those that matched expectations where ownership aligns with demographic and environmental variables. The red blocks indicate there are more cars than expected. These areas are where household own more personal vehicles than predicted. In neighborhoods with low transit availability, this reflects forced auto ownership where families must maintain multiple vehicles despite financial strain.
 
 Green blocks dominate East and Central Omaha, including Midtown, Downtown, and the Creighton/UNMC district, which are located along the Dodge and Pacific Street corridors. High residential density, grid connectivity, and active transit routes (including ORBT) allow residents to comfortably maintain zero or single-vehicle households.
 
@@ -456,7 +436,7 @@ The "Transit Desert" of Omaha resides in Mid-City along the Center Street Corrid
 
 For regional decision makers, this map indicates that transit funding should target the high need corridors, such as around 72nd and Center Streets, where actual car ownership exceed expectations. 
 
-```{r, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on gross residential density (housing units/acre), identifying a key tipping point between 4 and 7.5 units per acre."}
+```{r PDP-GRD, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on gross residential density (housing units/acre), identifying a key tipping point between 4 and 7.5 units per acre."}
 # ==============================================================================
 # Helper Function & Generation of Diagnostic Partial Dependence Plots (PDP)
 # Random Forest Model Engine
@@ -497,17 +477,17 @@ ggplot(pdp_d1a, aes(x = var_val, y = yhat)) +
   )
 ```
 
-For the driving feature of Gross Residential Density, the Partial Dependence Plot illustrates how residential layout affects household auto reliance (Figure CC). Across low-density suburban and exurban environments (<3.5 housing units per acre), predicted vehicle ownership remains high. In these typical single-family residential developments, which are common to West Omaha, Bellevue, and Sarpy, low residential concentrations require auto dependency due to the distance of daily destinations.
+For the driving feature of Gross Residential Density, the Partial Dependence Plot illustrates how residential layout affects household auto reliance (Figure \@ref(fig:PDP-GRD)). Across low-density suburban and exurban environments (<3.5 housing units per acre), predicted vehicle ownership remains high. In these typical single-family residential developments, which are common to West Omaha, Bellevue, and Sarpy, low residential concentrations require auto dependency due to the distance of daily destinations.
 
 The most interesting aspect of the plot occurs between approximately 4 and 7.5 housing units per acre. At this point, predicted vehicle ownership drops significantly from 1.55 down to 1.25 vehicles per household. 
 
-Across a standard block group of 500 households, the decline of about 0.30 vehicles per household removes roughly 150 personal automobiles from the local transportation network, which has a significant impacts including on traffic and pollution. 
+Across a standard block group of 500 households, the decline of about 0.30 vehicles per household removes roughly 150 personal automobiles from the local transportation network, which has significant impacts including on traffic and pollution. 
 
 This range corresponds to middle-density neighborhoods such as multi-family town homes, small apartment groups, and historic urban districts. The curve plateaus around 1.25 vehicles before moving downward again in high-density urban neighborhoods.
 
 For regional planners, these finding provide a policy target for housing strategy. Rather than requiring high density high-rises to curtail automobile reliance, local municipalities can achieve significant reductions in auto dependency by enabling middle housing density at around 8 units per acre. By reforming restrictive single-family zoning codes and incentivizing moderate density developments, city planners in Omaha and Council Bluffs can actively lower the compulsory burden of car ownership, offering households genuine transportation flexibility while expanding regional housing supply.   
 
-```{r, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on distance to nearest transit stop (meters), identifying a key tipping point between 400 and 800 meters."}
+```{r PDP-transit, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on distance to nearest transit stop (meters), identifying a key tipping point between 400 and 800 meters."}
 # ------------------------------------------------------------------------------
 # 2. PDP: Transit Stop Proximity (D4A) - [Second Top Predictor]
 # ------------------------------------------------------------------------------
@@ -529,7 +509,7 @@ ggplot(pdp_d4a, aes(x = var_val, y = yhat)) +
   )
 ```
 
-For the second driving feature of Distance to Nearest Transit Stop, the Partial Dependence Plot shows a sharp incline at 500 meters (Figure DD). 400 meters, or roughly 0.25 miles, represents a standard 5-minute walking distance. At this range and lower, predicted auto ownership reaches its lowest levels at around 1.38 to 1.42 vehicles per household. The sharp upward trajectory immediately following marks a behavioral threshold where the physical distance exceeds a pedestrian's walking tolerance. This climb plateaus around 1.58 vehicles per household. In these transit-isolated environments, typical of exurban neighborhoods, public transit stops being a reasonable commuting option and forces complete auto reliance.
+For the second driving feature of Distance to Nearest Transit Stop, the Partial Dependence Plot shows a sharp incline at 500 meters (Figure \@ref(fig:PDP-transit)). 400 meters, or roughly 0.25 miles, represents a standard 5-minute walking distance. At this range and lower, predicted auto ownership reaches its lowest levels at around 1.38 to 1.42 vehicles per household. The sharp upward trajectory immediately following marks a behavioral threshold where the physical distance exceeds a pedestrian's walking tolerance. This climb plateaus around 1.58 vehicles per household. In these transit-isolated environments, typical of exurban neighborhoods, public transit stops being a reasonable commuting option and forces complete auto reliance.
 
 Since the behavioral shift away from vehicle reliance occurs almost exclusively within the 400 to 800 meter range, expanding route coverage or micro-transit feeder systems within this precise radius yields the highest dividend in reducing forced car ownership. Priority corridor investments, such as extending the ORBT network, can strategically pull underserved neighborhoods back under the critical 400-meter threshold, offering residents tangible economic relief from compulsory vehicle ownership.
 

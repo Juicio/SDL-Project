@@ -1,0 +1,8 @@
+Analysis,Feature_count,Silhouette_score,ARI_vs_base
+Base K-means,6,0.31574892364854207,1.0
+Ward hierarchical clustering,6,0.29441821691171804,0.7285106066360915
+Remove population density,5,0.35822022646392143,0.8860824586356186
+Remove intersection density,5,0.3398524849292496,0.9369088561010019
+Add employment-mix entropy,7,0.25874989626655587,0.7878408598212424
+Remove auto job accessibility,5,0.3525349380428808,0.9199826709010701
+Compact walkability specification,4,0.29361992563365735,0.5239117790386056
