@@ -4,10 +4,15 @@ title: 'Transit Equity and Built Environment Disparities: Omaha Metro vs. Counci
 output:
   html_document:
     toc: true
-    toc_float: true
-    theme: flatly
-  word_document:
+    df_print: paged
+  pdf_document:
     toc: true
+    number_sections: true
+    latex_engine: xelatex
+    extra_dependencies:
+    - booktabs
+    - colortbl
+    - float
 date: "2026-11-01"
 ---
 
@@ -18,6 +23,7 @@ knitr::opts_chunk$set(
   message = FALSE,
   fig.align = "center"
 )
+options(knitr.table.format = "latex")
 library(data.table)
 library(tidyverse)
 library(sf)
@@ -35,28 +41,34 @@ options(scipen = 999, tigris_class = "sf", tigris_use_cache = TRUE)
 
 # Variables used in Council Bluffs Omaha comparison
 
-* Transit Destination Accessibility (D5CR): Total number of jobs reachable within a 45 minute commute via public transit.
-* Automobile Destination Accessibility (D5AR): Total regional jobs reachable within a 45-minute commute via personal automobile
-* Percentage of Zero Vehicle households (Pct_ZeroCar): Percentage of households that own zero cars calculated from number of zero card households and the total number of households. 
-* Jobs per Household Diversity(D2A_JPHH): The ratio of jobs to households within a block group.
-* Total Street Intersection Density (D3A): Total intersection per square miles. 
-* Jurisdiction: Binary classification derived from FIPS codes that represent either Pottawattamie county or Douglas and Sarpy counties.
-
-
+- **Auto Regional Job Accessibility (D5AR):** Total regional employment accessible within a 45-minute travel time by automobile from the census block group. Higher values indicate greater regional labor-market reach via personal vehicle.
+- **Census Block Group Identifier (GEOID12):** Unique 12-digit Federal Information Processing Standards (FIPS) code used to merge tabular Smart Location Database records with Census Bureau TIGRIS geographic polygon shapefiles.
+- **Distance to Nearest Transit Stop (D4A):** Network pedestrian walking distance (in meters) from the block group population centroid to the nearest fixed-route public transit stop. Values are capped at an upper threshold of 3,000 meters to limit the statistical distortion of unserved exurban areas while preserving rank isolation.
+- **Gross Residential Density (D1A):** Total housing units per acre of unprotected land. Higher values indicate denser residential settlement patterns capable of supporting frequent transit service.
+- **Jurisdiction (jurisdiction):** Binary geographic indicator distinguishing census block groups located in Douglas and Sarpy Counties, Nebraska (Omaha urbanized area) from those in Pottawattamie County, Iowa (Council Bluffs).
+- **National Walkability Index (NatWalkInd):** Composite index evaluating overall pedestrian friendliness based on employment and household diversity, intersection density, and transit proximity. Scale: $1 =$ Least Walkable (Auto-Dependent Car Suburb); $20 =$ Most Walkable (Pedestrian-Oriented Urban Core).
+- **Percentage of Zero-Car Households (Pct_ZeroCar):** Proportion of occupied housing units within the block group that do not own or have access to a personal passenger vehicle, derived from Census demographic and vehicle availability tables. Used as the primary operational indicator of local transit dependency.
+- **Regional Transit Need Category (need_cat):** Operationalized tercile categorization of Pct_ZeroCar across the tri-county region, grouped into Low ($1$), Moderate ($2$), and High ($3$) relative transit need.
+- **Regional Transit Service Tier (access_cat):** Operationalized access tier reflecting either regional transit employment reach (D5CR) or pedestrian stop proximity (D4A), grouped into Low/Far ($1$), Moderate ($2$), and High/Close ($3$) relative supply.
+- **Street Intersection Density (D3A):** Density of multi-leg street intersections per square mile of unprotected land. Scale: Higher values reflect a tighter, more interconnected pedestrian street grid that minimizes walking detour distances.
+- **Transit Bivariate Matrix Group (group):** Combined 9-cell categorical grouping code (paste0(need_cat, "-", access_cat)) cross-tabulating relative transit need against transit supply, identifying spatial equity alignment and critical transit deserts.
+- **Transit Regional Job Accessibility (D5CR):** Total regional employment accessible within a 45-minute commute via public transit. Captures the functional employment utility of the regional transit network beyond physical stop presence.
+- **Jobs-to-Household Ratio (D2A_JPHH):** Balance between local employment opportunities and resident households within the block group. Captures local land-use mix and proximity between trip origins and destinations.
 
 
 
 
 # Methods
+1.4 Council bluffs - Omaha Comparisons
 
-Filtered for Omaha and Council bluffs. A standardized 12-digit Census Block Group Fips identifier (GEOID12) was constructed using state, county, census tract and block group so every neighborhood had a matching format identifier. The tigris package in R allowed the 12 digit id to be matched with spatial geometries from the Census bureau to allow for plotting. 
+This analysis was comparing block groups across the Omaha-Council bluffs metropolitan region. Eight measures were extracted from the U.S.Environmental Protection Agency’s Smart Location Database (SLD Version 3.0) to capture key dimensions of urban form, pedestrian infrastructure, and transit accessibility. EPA measures were standardized with a 12-digit Census FiPS identifier and linked to 2010 cartographic shapefiles from the U.S. Census bureau using the tigris spatial library in R. 
 
+Environmental indicators in metropolitan areas typically exhibity skew and non normality due to jobs and housing being distributed unevenly within cities. Distribution traits were checked to determine degree of skew and kurtosis in order to identify if parametric test would be appropriate to use on the data. 
 
-## Distribution Evaluation & Non-Parametric Significance
-The distribution properties of our indicators was evaluated to check for normality. Distribution properties checked included mean,median, skew and kurtosis. As a result of all indicators featuring a high degree of skew and kurtosis a non parametric significance test (Mann-Whitney U) was chosen to compare Council Bluffs and Omaha. 
-In order to control for type 1 error as a result of several comparisons a Bonferroni adjustment was applied. To determine practical significance an effect size was calculated using Cliff's delta (delta symbol). 
+As a result of this trend Omaha and Council bluffs were evaluated using a two-tailed Mann-Whitney U test based on median rather than sample means. To reduce type one error inflation from repeated hypothesis testing a Bonferroni adjustment was applied. In order to determine practical significance, an effect size of Cliff's delta ($\delta$) was obtained along side 95% confidence intervals. 
 
-Neighborhoods were grouped into low,medium and high for car-less households and bus-reachable jobs. The Y-axis was need for public transit in the form of how many people lived in a no car household. The X axis was how many jobs were reachable within a 45 minute drive meant to demonstrate how much transit was available to them. The Missouri river boundary was marked using the SF package to label the boundary between states. 
+Bivariate Transit Equity and Spatial map
+Based on findings of the hypothesis testing a need to identify spatial mapping of differences between the two states was identified. The goal was to map transit need against existing transit supply with respect to the border between nebraska and Iowa. Two seperate variables were used as evidence of transit supply. Physical stop proximity (D4A) which looked at the physical distance to the nearest transit stop and system destination reach (D5CR) which measured the volume of jobs within a 45 minute transit trip. These produced a 9 cell matrix ranging from high transit service and high car ownership and transit deserts with low transit service and low car ownership.Because approximately half of regional block groups lack fixed-route transit coverage and share the 3,000-meter cap, stop proximity tiers were assigned by grouping all unserved block groups into the lowest access tier, with the remaining served block groups partitioned by median walking distance. These terciles were split with the lowest third being low car ownership. This was to determine if lack of transit stops or other factors explained the difference in transit access to jobs. 
 
 
 ```{r, echo = FALSE} 
@@ -159,11 +171,9 @@ normality_table <- clean_data %>%
   )
 ```
 
-# Results:
-## Distribution and Normality
-An evaluation of the eight transportation indicators were non- normal across both Omaha and Council bluffs (Table 1). This is a result of centrally located block groups having a larger share of transportation access and employment opportunists while those living outside these tracts had lower access. This result in a rejection of the assumption of normality. As a result a two tailed Mann-Whitney U test and cliffs delta effect size were chosen. 
-
-
+# 2 Results:
+## 2.1 Metropolitan Disparities and Differences Between Metros
+ Is there differences in transit access between Omaha and Iowa metro areas and are they explained by typical urban population gradients or as a result of the boudary between the two states. 
 ```{r figure_normality_densities, fig.width = 10, fig.height = 7}
 dist_plot_data <- clean_data %>%
   select(jurisdiction, all_of(analysis_vars)) %>%
@@ -206,17 +216,12 @@ ggplot(dist_plot_data, aes(x = value, fill = jurisdiction, color = jurisdiction)
   labs(
   )
 ```
-# Figure 1: Distribution profiles of 8 indicators between both Council Bluffs and Omaha to display skeweness and normality of each variable. 
+*Figure 1: Distribution profiles of 8 indicators between both Council Bluffs and Omaha to display skew and normality.*
 
-
-
-
-
-
-
+The distribution confirms severe skew and non-normality across all 8 indicators in both metro areas.This confirmed the need to use non-parametric measures. 
 
 ## Metropolitan Hypothesis tests
-Hypothesis testing with a bonferroni correction identified several statistically significant differences between Omaha and Council Bluffs (Table 2). Omaha block groups were significantly better across 7 of the 8 indicators. Omaha block groups had significantly higher walk-ability, residential density, intersection density, and transit stop proximity and percent of zero vehicle households. Omaha had significantly smaller distance to the nearest transit stop. There was no significant difference on jobs per household.
+Hypothesis testing with a bonferroni correction identified several statistically significant differences between Omaha and Council Bluffs (Table 2). Only the ratio of jobs to households had no significant difference between the two states. Omaha had higher transit employment reach, distance to transit stops, walkability, and automobile job access. Council bluffs on the other hand had significantly lower percentage of households with 0 cars. This suggests that Omaha has greater transit access as well as ability to walk where Council bluffs is heavily reliant on car usage for transportation. A major takeaway of this is that while Council Bluffs has lower zero car households they also have less access via car to job opportunity. Additionally those that do not have a car live in transportation deserts due to council bluffs having longer distance to transit stops and lower access to jobs via transit. 
 
 ```{r, echo = FALSE} 
 jurisdiction_medians <- clean_data %>%
@@ -285,13 +290,12 @@ final_summary_table <- comparison_results %>%
 
 kable(
   final_summary_table,
+  booktabs = TRUE,
   caption = "Table 2: Non-Parametric Mann-Whitney U Tests and Cliff's Delta Effect Sizes (Bonferroni-Adjusted)",
   align = c("l", "l", "r", "r", "r", "r", "c", "c", "l")
 ) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+  kable_styling(latex_options = c("striped", "hold_position", "scale_down"))
 ```
-
-
 
 
 
@@ -368,6 +372,12 @@ metro_map_sf <- metro_shapes %>%
   inner_join(clean_data, by = "GEOID12")
 cat("Successfully matched block groups:", nrow(metro_map_sf), "\n")
 ```
+
+
+
+## Transit Need Vs Job Accessibility 
+
+
 ```{r, echo = FALSE} 
 library(sf)
 library(tidyverse)
@@ -398,8 +408,7 @@ p_map <- ggplot(equity_sf) +
   ) +
   theme_void() +
   labs(
-    title = "Transit Equity Mismatch: Omaha Metro vs. Council Bluffs",
-    subtitle = "Dark Red = High Zero-Car / Low Transit Job Reach (Critical Transit Desert)"
+    title = "Transit Equity Mismatch: Omaha Metro vs. Council Bluffs"
   ) +
   theme(
     plot.title = element_text(face = "bold", size = 13),
@@ -437,8 +446,12 @@ ggsave(
   dpi = 300
 )
 ```
+*Figure 2: Spatial mismatch between zero-vehicle household and Job accessibility.*
+
+The 3x3 bivariate figure identifies areas that feature poor access to public transit as well as a higher percentage of zero car households. In central Omaha there are high concentrations of zero-vehicle households that is associated with moderate to high transit job accessibility. In contrast central council bluff contains areas that sit in the lowest tier of job accessibility and the highest amount of zero vehicle households. These areas leave residents without personal vehicles with barriers to job access and lengthy commute times.
 
 
+## Physical Transit Stop Proximity Role in Job Access
 ```{r, echo = FALSE} 
 library(sf)
 library(tidyverse)
@@ -448,10 +461,16 @@ library(patchwork)
 equity_d4_sf <- metro_map_sf %>%
   filter(!is.na(Pct_ZeroCar) & !is.na(D4A)) %>%
   mutate(
-    need_cat   = ntile(Pct_ZeroCar, 3),
-    access_cat = ntile(rank(-D4A, ties.method = "min"), 3),
-    group      = paste0(need_cat, "-", access_cat)
+    need_cat = ntile(Pct_ZeroCar, 3),
+    # Ensure all 3000m unserved tracts stay in Tier 1 (Far/Low Access)
+    access_cat = case_when(
+      D4A >= 3000 ~ 1L,
+      D4A > median(D4A[D4A < 3000]) ~ 2L,
+      TRUE ~ 3L
+    ),
+    group = paste0(need_cat, "-", access_cat)
   )
+
 
 bivariate_colors <- c(
   "1-1" = "#e8e8e8", "1-2" = "#b0d5df", "1-3" = "#64acbe",
@@ -470,7 +489,6 @@ p_map_d4 <- ggplot(equity_d4_sf) +
   theme_void() +
   labs(
     title = "Transit Proximity Mismatch: Omaha Metro vs. Council Bluffs",
-    subtitle = "Dark Red = High Zero-Car / Farthest from Transit Stop (Critical Transit Desert)"
   ) +
   theme(
     plot.title = element_text(face = "bold", size = 13),
@@ -493,8 +511,8 @@ p_legend_d4 <- ggplot(legend_df, aes(x = access, y = need, fill = group)) +
   ) +
   coord_fixed() +
   labs(
-    x = "Stop Proximity (D4A) →",
-    y = "Zero-Car HHs (%) →"
+    x = "Stop Proximity (D4A) ->",
+    y = "Zero-Car HHs (%) ->"
   ) +
   theme_minimal(base_size = 8) +
   theme(
@@ -514,13 +532,10 @@ ggsave(
   dpi = 300
 )
 ```
+*Figure 3: Walking proximity and percent of zero car households.*
 
-##Bivariate transit deserts 
-Consistent with the large effect size for transit access and job access decline sharply at the Nebraska Iowa border. Even though a high percentage of Council bluffs workforce commutes into Douglas and Sarpy county for work, council bluffs core has blocks with high amounts of 0 car households with poor access to jobs via transit as a result of limited transit options across the Nebraska Iowa border. While there exists some transit access from council bluffs into Omaha there exists need to expand transit options ro prevent some neighborhoods from being isolated from job access. 
 
-While transit job access is poor in council bluffs there is a high amount of proximity to physical transit stops. This coverage declines outside of downtown council bluffs with 40% of block groups exceeding 3,000 meters from a stop.  For these residents walking to transit stops is not feasible. 
-
-Council bluffs suffers from significantly longer distances to transit stops, and for areas that do have transit stops they don't necessarily provide access to job opportunities. These factors contribute to council bluffs having a lower proportion of zero car households as car ownership is more important than the Omaha metro. 
+When comparing walking distance to transit stops with job reach shows that those in Council bluffs are denied access to jobs Several block groups within central Council bluffs that lack access to personal vehicles also have moderate to far distance to their nearest transit stop. While some of these neighborhoods have bus stops they are much further than areas within Central Omaha. This supports that those living in Council Bluffs have a higher barrier to transit than those living across the river in Douglas County. 
 
 
 #Limitations
