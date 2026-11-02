@@ -1,19 +1,27 @@
 ---
-title: 'Transit Equity and Built Environment Disparities: Omaha Metro vs. Council
-  Bluffs'
+title: 'Transit Equity and Built Environment Disparities: Omaha Metro vs. Council Bluffs'
+header-includes:
+  - \usepackage{titling}
+  - \pretitle{\begin{center}\LARGE\bfseries}
+  - \posttitle{\end{center}\vskip 0.5em}
+  - \preauthor{\begin{center}\large}
+  - \postauthor{\end{center}\vskip 0.5em}
+  - \predate{\begin{center}\large}
+  - \postdate{\end{center}}
+  - \usepackage{caption}
+  - \captionsetup[table]{position=bottom, font=it}
+  - \captionsetup[figure]{font=it}
 output:
-  pdf_document:
+  bookdown::html_document2:
     toc: true
+    toc_depth: 2
     number_sections: true
-    latex_engine: xelatex
-    extra_dependencies:
-    - booktabs
-    - colortbl
-    - float
-  html_document:
-    toc: true
+    theme: flatly
     df_print: paged
-date: "2026-11-01"
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 2
+    number_sections: true
 ---
 # Smart Location Database
 ```{r setup, include = FALSE}
@@ -55,7 +63,7 @@ options(scipen = 999, tigris_class = "sf", tigris_use_cache = TRUE)
 
 # 2 Methods
 
-## 2.1 Council Bluffs - Omaha Comparisons
+## Council Bluffs - Omaha Difference Comparisons
 
 This analysis compared block groups across the Omaha-Council Bluffs metropolitan region. Eight measures were extracted from the U.S.Environmental Protection Agency’s Smart Location Database (SLD Version 3.0) to capture key dimensions of urban form, pedestrian infrastructure, and transit accessibility. EPA measures were standardized with a 12-digit Census Bureau FIPS identifier and linked to 2010 cartographic shapefiles from the U.S. Census bureau using the tigris spatial library in R.
 
@@ -63,10 +71,26 @@ Environmental indicators in metropolitan areas typically exhibit skew and non-no
 
 As a result of this trend Omaha and Council bluffs were evaluated using a two-tailed Mann-Whitney U test based on median rather than sample means. To reduce Type I error inflation from repeated hypothesis testing a Bonferroni adjustment was applied. In order to determine practical significance, an effect size of Cliff's delta ($\delta$) was obtained alongside 95% confidence intervals.
 
-## 2.2 Bivariate Transit Equity and Spatial map 
+**Bivariate Transit Equity and Spatial map**
+
 Based on findings of the hypothesis testing results, spatial mapping was conducted to identify disparities across state lines. The goal was to map transit need against existing transit supply with respect to the border between Nebraska and Iowa. Two separate variables were used as evidence of transit supply. Physical stop proximity (D4A), which looked at the physical distance to the nearest transit stop and system destination reach (D5CR) which measured the volume of jobs within a 45 minute transit trip. These produced a 9-cell matrix ranging from high access/high car ownership to critical areas with low transit access and low car ownership. Because approximately half of regional block groups lack fixed-route transit coverage and share the 3,000-meter cap, stop proximity tiers were assigned by grouping all unserved block groups into the lowest access tier, with the remaining served block groups partitioned by median walking distance. These terciles were split with the lowest third being low car ownership. This was to determine if lack of transit stops or other factors explained the difference in transit access to jobs.
 
+The distance-to-transit-stop variable (D4A) was assigned an artificial upper threshold of 3,000 meters in the source dataset. While this cap limits distortion from extreme rural outliers, it potentially masks the true degree of physical isolation experienced by households situated beyond that perimeter. Similarly, the 45-minute commute window (D5CR, D5AR) applies a fixed ceiling that may not reflect the reality of Council Bluffs residents who must undertake daily interstate commutes well beyond 45 minutes to reach regional employment centers.
+
+
 ```{r, echo = FALSE}
+
+library(data.table)
+library(tidyverse)
+library(sf)
+library(tigris)
+library(rstatix)
+library(effsize)
+library(moments)
+library(patchwork)
+library(knitr)
+library(kableExtra)
+
 ne_blocks <- block_groups(state = "NE", county = c("Douglas", "Sarpy"), year = 2010, cb = TRUE)
 ia_blocks <- block_groups(state = "IA", county = "Pottawattamie", year = 2010, cb = TRUE)
 
@@ -168,11 +192,11 @@ normality_table <- clean_data %>%
 
 # 3 Results:
 
-## 3.1 Metropolitan Disparities and Differences Between Metros
+## Metropolitan Disparities and Differences Between Metros
 
 Are there differences in transit access between Omaha and Iowa metro areas and are they explained by typical urban population gradients or as a result of the boundary between the two states?
 
-```{r fig-distributions, echo=FALSE, message=FALSE, warning=FALSE, fig.width=9, fig.height=7, out.width="100%", fig.align="center"}
+```{r fig-distributions, echo=FALSE, message=FALSE, warning=FALSE, fig.width=9, fig.height=7, out.width="100%", fig.align="center", fig.cap="Comparative Density Distributions of Built Environment and Transit Equity Indicators Between Council Bluffs (IA) and Omaha (NE)."}
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -222,15 +246,9 @@ ggplot(plot_data, aes(x = value, fill = jurisdiction, color = jurisdiction)) +
   )
 ```
 
-Comparative Density Distributions of Built Environment and Transit Equity Indicators Between Council Bluffs (IA) and Omaha (NE).
-
-
-
-Across the bi-state metropolitan area, transit access and urban infrastructure have uneven patterns. Rather than a gradient that peaks at the metropolitan core and then has a smooth decline the further you get away from downtown there is an uneven distribution of connectivity and transit services that drops off starkly at the Missouri river boundary. Findings from these distributions show Council Bluffs has lower intersection density and more dispersed street pattern that would be consistent with car based development. the distribution for car ownership shows the majority of households have at least one vehicle. However a small collection of block groups have disproportionately high concentrations of zero-vehicle households. Additionally job access by car is tightly grouped around the interstate network.  
-
+Across the bi-state metropolitan area, transit access and urban infrastructure have uneven patterns (Figure \@ref(fig:fig-distributions)). Rather than a gradient that peaks at the metropolitan core and then has a smooth decline the further you get away from downtown there is an uneven distribution of connectivity and transit services that drops off starkly at the Missouri river boundary. Findings from these distributions show Council Bluffs has lower intersection density and more dispersed street pattern that would be consistent with car based development. the distribution for car ownership shows the majority of households have at least one vehicle. However a small collection of block groups have disproportionately high concentrations of zero-vehicle households. Additionally job access by car is tightly grouped around the interstate network.  
 
 Analysis across the bi-state area confirms inequity exists between Omaha and Council Bluffs across seven of the eight indicators. The only exception was there was an even number of jobs to households on both sides. Omaha block groups had significantly greater transit employment reach, superior walkability, broader automobile job access, and far closer proximity to physical transit stops. Conversely Council Bluffs has a lower proportion of zero-car households indicating that residents are reliant on car ownership for mobility. Additionally Council Bluffs resident despite having a higher proportion of zero car households have fewer access to jobs than their Omaha peers. For those without a vehicle in council bluffs they are even more vulnerable with longer walking distances and restricted access to jobs via transit. 
-
 
 ```{r, echo = FALSE, results = 'hide'}
 jurisdiction_medians <- clean_data %>%
@@ -377,12 +395,12 @@ clean_data <- sld_clean %>%
 
 metro_map_sf <- metro_shapes %>%
   inner_join(clean_data, by = "GEOID12")
-cat("Successfully matched block groups:", nrow(metro_map_sf), "\n")
+#cat("Successfully matched block groups:", nrow(metro_map_sf), "\n")
 ```
 
-## 3.2 Transit Need vs Job Accessibility
+**Transit Need vs Job Accessibility**
 
-```{r, echo = FALSE}
+```{r spatial-mismatch, echo = FALSE, fig.cap="Spatial mismatch between zero-vehicle household and job accessibility."}
 library(sf)
 library(tidyverse)
 library(patchwork)
@@ -451,15 +469,11 @@ ggsave(
 )
 ```
 
-*Spatial mismatch between zero-vehicle household and job accessibility.*
+The car ownership and job accessibility figure visualizes transit equity between the two states by cross referencing percentage of households with no car against the functional transit supply (the number of regional jobs accessible via transit) (Figure \@ref(fig:spatial-mismatch)). Critical transit deserts are the bright red blocks with high proportion of zero car households as well as low amounts of transit accessible jobs. In Council Bluffs, these areas are neighborhoods bordering the river. In Omaha there are some of these in portions of north and south Omaha. Residents living in this area face significant structural challenges by not owning a vehicle. In contrast the dark red can be seen along Omahas Dodge street and represents those that have low car ownership but have a high amount of jobs accessible via transit. This means those without cars in these areas have alternative ways off accessing job opportunity. There is very little blocks of this color in Council Bluffs who lack transit options to buffer the effects of low car ownership.  
 
-The car ownership and job accessibility figure visualizes transit equity between the two states by cross referencing percentage of households with no car against the functional transit supply (the number of regional jobs accessible via transit). Critical transit deserts are the bright red blocks with high proportion of zero car households as well as low amounts of transit accessible jobs. In Council Bluffs, these areas are neighborhoods bordering the river. In Omaha there are some of these in portions of north and south Omaha. Residents living in this area face significant structural challenges by not owning a vehicle. In contrast the dark red can be seen along Omahas Dodge street and represents those that have low car ownership but have a high amount of jobs accessible via transit. This means those without cars in these areas have alternative ways off accessing job opportunity. There is very little blocks of this color in Council Bluffs who lack transit options to buffer the effects of low car ownership.  
+**Physical Transit Stop Proximity Role in Job Access**
 
-
-
-## 3.3 Physical Transit Stop Proximity Role in Job Access
-
-```{r, echo = FALSE}
+```{r walkable-proximity, echo = FALSE, fig.cap="Walking proximity and percent of zero car households."}
 library(sf)
 library(tidyverse)
 library(patchwork)
@@ -540,13 +554,6 @@ ggsave(
 )
 ```
 
-*Walking proximity and percent of zero car households.*
-The walking proximity and job access figure evaluates physical infrastructure coverage by mapping transit need (percentage of zero-car households) against walking distance to the nearest transit stop. The Bright red represents those that have walking distance to transit stops that exceed 3000 meters and have a higher percentage of zero-vehicle households. In these groups access to transit stops is poor making them part of a transit desert. Nearly 40% of Council Bluffs transit sits beyond walking distance for those living in Council Bluffs. The absence of transit stops creates a barrier for residents and a greater need for vehicle ownership. This suggests that a great deal of the problem for Council Bluffs is a result of physical infrastructure. 
+The walking proxmity and job access figure evaluates physical infrastructure coverage by mapping transit need (percentage of zero-car households) against walking distance to the nearest transit stop (Figure \@ref(fig:walkable-proximity)). The Bright red represents those that have walking distance to transit stops that exceed 3000 meters and have a higher percentage of zero-vehicle households. In these groups access to transit stops is poor making them part of a transit desert. Nearly 40% of Council Bluffs transit sits beyond walking distance for those living in Council Bluffs. The absence of transit stops creates a barrier for residents and a greater need for vehicle ownership. This suggests that a great deal of the problem for Council Bluffs is a result of physical infrastructure. 
 
-# Policy and Planning recommendations 
 Council Bluff has an access cliff at the state line where bus services are limited and reliance on cars is much greater when compared to Omaha. Council Bluffs resident rely on jobs located within the core metro area of Omaha but are cut off due to poor transit services and lack of a vehicle. An interstate partnership from Council Bluffs to key job areas in Omaha is needed to bridge the job accessibility gap that exists between the two cities. Additionally land use reforms in commercial areas within Council Bluffs to promote greater walkability through more protected pedestrian crossings and continuous sidewalk networks.This would also reduce walking barriers to transit hubs in areas with higher population density. Additionally a shared bus pass system between Omaha and Council Bluffs may help to reduce friction between the two systems as well as make it more realistic for individuals to transfer from different bus routes without long wait times.
-
-
-
-# 4 Limitations 
-The distance-to-transit-stop variable (D4A) was assigned an artificial upper threshold of 3,000 meters in the source dataset. While this cap limits distortion from extreme rural outliers, it potentially masks the true degree of physical isolation experienced by households situated beyond that perimeter. Similarly, the 45-minute commute window (D5CR, D5AR) applies a fixed ceiling that may not reflect the reality of Council Bluffs residents who must undertake daily interstate commutes well beyond 45 minutes to reach regional employment centers.
