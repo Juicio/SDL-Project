@@ -678,7 +678,7 @@ Westward towards 90th Street and Sarpy County, the suburban transition shows blo
 
 The "Transit Desert" of Omaha resides in Mid-City along the Center Street Corridor. The prominent cluster of deep red occurs around 72nd Street and Center Street. This area represents the metro’s primary transit gap. While surrounded by commercial areas, the neighborhood suffers from isolation relative to transit networks. Because auto reliance here vastly exceeds neighborhood expectations, residents face a compulsory "car tax" where they spend a disproportionate share of household income on auto financing, insurance, and fuel simply to commute to work and access basic goods.
 
-For regional decision makers, this map indicates that transit funding should target the high need corridors, such as around 72nd and Center Streets, where actual car ownership exceed expectations. 
+For regional decision makers, this map indicates that transit funding should target the high need corridors, such as around 72nd and Center Streets, where actual car ownership exceeds expectations. 
 
 ```{r PDP-GRD, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on gross residential density (housing units/acre), identifying a key tipping point between 4 and 7.5 units per acre.", out.width="80%", fig.align="center"}
 # ==============================================================================
@@ -1087,16 +1087,15 @@ Statistical analysis of the differences between Omaha and Council Bluffs demonst
 
 # Final Project Outline
 
-The analyses and results of this Draft Project have opened up a path for more discovery and tool creation. The following is an outline of a plan to move the study further:
+The analyses and results of this Draft Project have opened up paths for more discovery and tool creation. The following is an outline to move the study further:
 
 - While several maps were created to illustrate important features regarding the transit gap in the Metro area, each colored area contains more information than the static plot shows. Creating a Shiny Dashboard to allow a user to hover over each area will allow them to gain greater insight into the results of our investigation.
 
 - A 3 mile long street car is being constructed in Omaha's metro core along Harney and Farnam Steets. This is one of the primary investments in transportation currently ongoing in the city. While it is meant for economic development, we can expand our analysis by profiling the census block located along the proposed path of the car, then compare this area to other blocks in our dataset to see if transportation investment is relieving any existing transportation inequity
 
-- Micromobility in the form of bikeshare hubs and electric scooter stations have become popular in cities to aid in transportation. Based on the findings we have already, we can investigate whether these stations are providing any relief to transit desert areas identified. We can find these hubs using Douglas county GIS and create a radius around this infrastructure to determine which blocks are benefiting from expanding micromobility investment. This would allow us to see if this is helping to relieve transportation inequality.
+- Micromobility in the form of bikeshare hubs and electric scooter stations have become popular in cities to aid in transportation. Based on our findings, we can investigate whether these stations provide any relief to transit desert areas. We can find these hubs using Douglas county GIS and create a radius around this infrastructure to determine which blocks are benefiting from expanding micromobility investment. This would allow us to see if this is helping to relieve transportation inequality.
 
 - Our research highlights how limited transportation alternatives can increase reliance on private vehicles. We can expand this by combining neighborhood income data with estimated vehicle ownership and public transit costs to examine the potential financial burden of automobile dependence across different neighborhood types. This would help quantify the economic implications of the transit gap and strengthen our urban equity recommendations.
-
 
 # Code Availability
 
