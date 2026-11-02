@@ -354,7 +354,7 @@ In order to analyze the underlying drivers of household vehicle ownership, featu
 
 ## Transit and Employment Accessibility
 
-The transit and employment accessibility analysis examined whether residents of neighborhoods with more car-free households had comparable access to jobs using public transportation. The team’s three-county study extract of the EPA Smart Location Database contains 727 Census block groups in Douglas and Sarpy counties, Nebraska, and Pottawattamie County, Iowa. Because the extract includes land outside the two named cities, findings describe the three-county study area, not a direct city-to-city comparison.
+The transit and employment accessibility analysis examined whether residents of neighborhoods with more car-free households had comparable access to jobs using public transportation. The team’s three-county study extract of the EPA Smart Location Database contains 728 Census block groups in Douglas and Sarpy counties, Nebraska, and Pottawattamie County, Iowa. Because the extract includes land outside the two named cities, findings describe the three-county study area, not a direct city-to-city comparison.
 
 We measured potential dependence on public transportation using the percentage of households without a vehicle. The key outcome was modeled access to jobs by transit, supplemented by distance to the nearest transit stop and evening peak transit service frequency. Automobile job accessibility was retained for descriptive context, but it was not used to classify transit gaps. The EPA transit job-access indicator is a travel-time-weighted estimate derived from historical transit schedules, not a count of jobs held or a measurement of present-day service.
 
