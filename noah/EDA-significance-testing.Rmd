@@ -12,16 +12,16 @@ header-includes:
   - \captionsetup[table]{position=bottom, font=it}
   - \captionsetup[figure]{font=it}
 output:
-  bookdown::pdf_document2:
-    toc: true
-    toc_depth: 2
-    number_sections: true
   bookdown::html_document2:
     toc: true
     toc_depth: 2
     number_sections: true
     theme: flatly
     df_print: paged
+  bookdown::pdf_document2:
+    toc: true
+    toc_depth: 2
+    number_sections: true
 ---
 # Smart Location Database
 ```{r setup, include = FALSE}
