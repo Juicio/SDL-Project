@@ -17,6 +17,7 @@ The SLD is a rich dataset of 90 unique features. We focus on a subset that is re
 - **Employment & Housing Mix (D2B_E8MIX):** Balance between housing units and employment opportunities within the block group. Scale: 0 = Pure residential or pure commercial; 1 = Highly balanced mix of jobs and housing.
 - **Employment Accessibility by Automobile (D5AR):** Travel-time-weighted access to employment by automobile, used as descriptive context.
 - **Employment Accessibility by Transit (D5BR):** Travel-time-weighted access to employment by public transit, based on modeled transit schedules. Missing values do not mean zero transit service.
+- **Employment Diversity / Jobs-to-Household Ratio (D2A_JPHH):** Ratio of jobs to households within the block group, capturing localized mixed-use balance.
 - **Gross Employment Density (D1C):** Total jobs per acre of unprotected land. Higher values indicate higher concentrations of employment.
 - **Gross Population Density (D1B):** Total population per acre of unprotected land. Higher values indicate greater population concentration.
 - **Gross Residential Density (D1A):** Housing units per acre of unprotected land. Higher values indicate denser residential settlement.
@@ -26,7 +27,9 @@ The SLD is a rich dataset of 90 unique features. We focus on a subset that is re
 - **National Walkability Index (NatWalkInd):** Composite index evaluating overall pedestrian friendliness based on density, diversity, and design. Scale: 1 = Least Walkable (Auto-Dependent Car Suburb); 20 = Most Walkable (Pedestrian-Oriented Urban Core).
 - **Peak-Period Transit Service Frequency (D4C):** Scheduled transit service frequency during the weekday evening peak period for qualifying nearby stops.
 - **Percentage Low-Income Households (Pct_LowInc):** Proportion of households living below the regional low-income threshold.
+- **Street Intersection Density, Total (D3A):** Total multi-leg street intersections per square mile of unprotected land.
 - **Street Intersection Density (D3B):** Pedestrian-oriented street grid density (intersections with 3 or more legs per square mile). Scale: Higher values reflect a tighter, more interconnected street grid conducive to walking.
 - **Transit Access Rank (D4A_Ranked):** Ranked measure of proximity to transit, with higher values indicating better transit access; block groups without reported transit coverage receive the lowest rank.
+- **Transit Regional Job Accessibility (D5CR):** Total regional employment accessible within a 45-minute commute via public transit. (Crucial: This is the exact variable used in your bivariate mapping code (need_cat vs. access_cat), your distribution plots, and Table 2. D5BR in your current list is a decay-weighted accessibility measure, whereas D5CR is the cumulative 45-minute count).
 - **Transit Service Density (D4D):** Peak-period transit service frequency normalized by block group area.
 - **Zero-Car Household Share (Pct_AO0):** Proportion of households with no available vehicle. This variable was compared across neighborhood archetypes after clustering and was not used to create the clusters.
