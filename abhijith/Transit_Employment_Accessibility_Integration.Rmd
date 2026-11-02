@@ -27,6 +27,8 @@ To identify potential transit-to-employment mismatches, we applied a two-conditi
 
 # Results
 
+## Transit and Employment Accessibility
+
 ```{r abhijith-figure-setup, include=FALSE}
 abhijith_fig <- function(filename) {
   # Works when this section is knitted inside the team project root or from abhijith/.
@@ -38,7 +40,6 @@ abhijith_fig <- function(filename) {
 }
 ```
 
-## Transit and Employment Accessibility
 
 Our analysis finds that measured transit access is often strongest in places where more households have no car, but this regional pattern conceals neighborhoods that may still face obstacles reaching employment. The important planning question is therefore not simply whether buses reach car-free households, but whether those residents can use available routes to reach jobs. Three figures illustrate the regional trend, the exceptions, and the limits of the evidence.
 
