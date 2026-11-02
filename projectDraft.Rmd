@@ -1,5 +1,5 @@
 ---
-title: "Project Title: Subtitle Describing the Main Objective"
+title: "Mapping the Transit Gap: Neighborhood Form, Automobile Dependence, and Accessibility in the Omaha-Council Bluffs Region"
 author: "Juicio Brennan  •  Abhijith Patlori  •  Noah Pierson  •  Adithya K. Shyaman"
 date: "`r Sys.Date()`"
 header-includes:
@@ -29,7 +29,7 @@ output:
     theme: flatly
     df_print: paged
 abstract: |
-  This project investigates [insert core problem/dataset] using exploratory data analysis and statistical modeling techniques. Using data sourced from [insert source], we apply [insert key methods] to evaluate [insert main hypothesis/research question]. Our primary findings demonstrate that [insert key quantitative result]. These results suggest [insert broader implication for data science/domain].
+  Personal vehicle ownership can impose a substantial financial burden on households, particularly in metropolitan areas where low-density development and limited transit make driving necessary to reach employment and essential services. This study examines how neighborhood form, transit access, vehicle availability, and employment accessibility vary across the Omaha-Council Bluffs metropolitan area. Using the U.S. Environmental Protection Agency's Smart Location Database (SLD 3.0), we combine neighborhood clustering, predictive modeling, employment accessibility analysis, and regional comparisons to investigate automobile dependence and transit equity. Five neighborhood archetypes are identified that demonstrate households without vehicles are most concentrated in the most transit-served areas. Residential density and proximity to transit stops are shown as major drivers of household vehicle ownership. Spatial analysis identifies transit-gap locations, including central Omaha neighborhoods and car-free block groups with limited employment accessibility. Regional comparisons further indicate that Council Bluffs generally has weaker transit and employment access than Omaha. Together, these findings provide city planners and regional agencies with a practical framework for protecting service in transit-dependent neighborhoods and prioritizing route, frequency, first- and last-mile, and land-use improvements where needs are greatest.
 ---
 
 <style>
@@ -80,23 +80,37 @@ The EPA Smart Location Database (SLD) is a nationwide and open-source geographic
 
 The primary aim of the Smart Location Database is to help create sustainable, resilient, and transit-supported communities by providing an empirical foundation for land-use and transportation decisions. By offering accessible and consistent spatial indicators across all U.S. metropolitan regions, the database empowers researchers to predict travel demand, evaluate vehicle miles traveled, model household auto ownership, and identify areas with pronounced walkability or transit accessibility gaps. Ultimately, the SLD seeks to support multi-modal planning initiatives that lower greenhouse gas emissions, enhance urban mobility options, and inform equitable land development strategies across diverse regional areas.
 
-The SLD is a vast dataset consisting of 220,740 rows with a size of almost 200 MB. Since the Omaha-Council Bluffs metropolitan area resides in Douglas, Sarpy, and Pottawattamie counties, the tigris R-package was utilized to identify the specific census blocks of the region. The rows matching these blocks were extracted and placed in their own file with a final 728 rows and size of roughly 663 KB. This smaller, focused dataset allowed for more efficient analysis of the metropolitan area.
+The SLD is an ideal dataset for our study to analyze the presence and impact of transit gaps in the Omaha-Council Bluffs metropolitan area. The data is detailed, high-quality, and as recent as 2021. With 90 features, it provides a comprehensive view of the built environment, socio-economic conditions, and accessibility factors that influence urban equity in the region. The rich variable set permits us to determine unique neighborhood archetypes, predict the primary influences of compulsory automobile ownership, evaluate employment accessibility, and compare the differences between Omaha and Council Bluffs.
 
-It should be noted that the SLD makes use of sentinel values for missing data. For example, the Distance to Transit Stop feature uses the value “-99999” for census blocks that have no regional transit. These values are handled by omission or recoding based on the analysis utilized as clearly stated in the Methods section.
+The SLD is a vast dataset consisting of 220,740 rows with a size of almost 200 MB. Since the Omaha-Council Bluffs metropolitan area resides in Douglas, Sarpy, and Pottawattamie counties, the tigris R-package was utilized to identify the specific census blocks of the region. The rows matching these blocks were extracted and placed in their own file with a final 728 rows and size of roughly 663 KB. This smaller, focused dataset allowed for more efficient analysis of the metropolitan area.
 
 The SLD is a rich dataset of 90 unique features. We focus on a subset that is relevant to our analysis of urban equity in the Omaha-Council Bluffs Metro area. The utilized variables are:
 
+- **Automobile Job Accessibility Index (D5CRI):** Relative accessibility to regional employment by automobile. Scale: 0 = Lowest regional job accessibility; 1 = Highest regional job accessibility.
 - **Census Block Group Identifier (GEOID):** A unique 12-digit Federal Information Processing Series (FIPS) code that uniquely identifies each Census Block Group nationwide.
 - **Distance to Nearest Transit Stop (D4A):** Distance (in meters) from the block group population centroid to the nearest transit stop.
+- **Employment & Household Mix (D2A_EPHHM):** Balance between employment activity and households within the block group. Higher values indicate a more even mix of jobs and households.
 - **Employment & Housing Mix (D2B_E8MIX):** Balance between housing units and employment opportunities within the block group. Scale: 0 = Pure residential or pure commercial; 1 = Highly balanced mix of jobs and housing.
+- **Employment Accessibility by Automobile (D5AR):** Travel-time-weighted access to employment by automobile, used as descriptive context.
+- **Employment Accessibility by Transit (D5BR):** Travel-time-weighted access to employment by public transit, based on modeled transit schedules. Missing values do not mean zero transit service.
+- **Employment Diversity / Jobs-to-Household Ratio (D2A_JPHH):** Ratio of jobs to households within the block group, capturing localized mixed-use balance.
 - **Gross Employment Density (D1C):** Total jobs per acre of unprotected land. Higher values indicate higher concentrations of employment.
+- **Gross Population Density (D1B):** Total population per acre of unprotected land. Higher values indicate greater population concentration.
 - **Gross Residential Density (D1A):** Housing units per acre of unprotected land. Higher values indicate denser residential settlement.
+- **Households (HH):** Total number of households in the Census block group.
+- **Households Without a Vehicle (AutoOwn0):** Number of households reporting no vehicle available.
 - **Median Household Income (MedIncome):** Census block group median household income in USD.
 - **National Walkability Index (NatWalkInd):** Composite index evaluating overall pedestrian friendliness based on density, diversity, and design. Scale: 1 = Least Walkable (Auto-Dependent Car Suburb); 20 = Most Walkable (Pedestrian-Oriented Urban Core).
+- **Peak-Period Transit Service Frequency (D4C):** Scheduled transit service frequency during the weekday evening peak period for qualifying nearby stops.
 - **Percentage Low-Income Households (Pct_LowInc):** Proportion of households living below the regional low-income threshold.
+- **Street Intersection Density, Total (D3A):** Total multi-leg street intersections per square mile of unprotected land.
 - **Street Intersection Density (D3B):** Pedestrian-oriented street grid density (intersections with 3 or more legs per square mile). Scale: Higher values reflect a tighter, more interconnected street grid conducive to walking.
+- **Transit Access Rank (D4A_Ranked):** Ranked measure of proximity to transit, with higher values indicating better transit access; block groups without reported transit coverage receive the lowest rank.
+- **Transit Regional Job Accessibility (D5CR):** Total regional employment accessible within a 45-minute commute via public transit. (Crucial: This is the exact variable used in your bivariate mapping code (need_cat vs. access_cat), your distribution plots, and Table 2. D5BR in your current list is a decay-weighted accessibility measure, whereas D5CR is the cumulative 45-minute count).
+- **Transit Service Density (D4D):** Peak-period transit service frequency normalized by block group area.
+- **Zero-Car Household Share (Pct_AO0):** Proportion of households with no available vehicle. This variable was compared across neighborhood archetypes after clustering and was not used to create the clusters.
 
-By focusing on the five D's (Density, Diversity, Design, Destination Accessibility, and Distance to Transit), these features allow our study to analyze the presence and impact of transit gaps in the Omaha-Council Bluffs metropolitan area. They provide a comprehensive view of the built environment, socio-economic conditions, and accessibility factors that influence urban equity in the region. The variables permit us to determine unique neighborhood archetypes, predict the primary influences of compulsory automobile ownership, evaluate employment accessibility, and compare the differences between Omaha and Council Bluffs.
+It should be noted that the SLD makes use of sentinel values for missing data. For example, the Distance to Transit Stop feature uses the value “-99999” for census blocks that have no regional transit. These values are handled by omission or recoding based on the analysis utilized as clearly stated in the Methods section.
 
 # Methods
 
@@ -522,7 +536,7 @@ The broad geographic pattern is stable enough for regional screening, but indivi
 
 In the Omaha-Council Bluffs area, sprawling land-use patterns have historically made personal vehicles the primary, if not sole, pathway to regional opportunity. By modeling expected household vehicle counts as a function of walkability, density, street connectivity, and transit proximity, this analysis establishes a quantitative baseline for what a neighborhood's auto reliance should look like based on its physical and economic characteristics.
 
-```{r ownership-drivers, echo=FALSE, fig.cap="Feature importance scores based on Gini impurity reduction, highlighting the primary drivers of predicted household vehicle ownership."}
+```{r ownership-drivers, echo=FALSE, fig.cap="Feature importance scores based on Gini impurity reduction, highlighting the primary drivers of predicted household vehicle ownership.", out.width="80%", fig.align="center"}
 # ==============================================================================
 # Final Model Evaluation & Variable Importance
 # ==============================================================================
@@ -599,7 +613,7 @@ Pedestrian network connectivity and destination land-use form a second tier of p
 
 Rather than treating auto ownership as a consumer choice driven by income, the model demonstrates that housing density and transit proximity are the key drivers governing regional mobility. By strategically aligning these two features, the local municipalities can lower the forced economic burden of household vehicle ownership and advance urban equity.
 
-```{r spatial-map-ownership, echo=FALSE, fig.cap="Spatial mapping of the Car Ownership Gap across the Omaha-Council Bluffs metropolitan region, identifying mismatches between predicted and actual household vehicle reliance."}
+```{r spatial-map-ownership, echo=FALSE, fig.cap="Spatial mapping of the Car Ownership Gap across the Omaha-Council Bluffs metropolitan region, identifying mismatches between predicted and actual household vehicle reliance.", out.width="80%", fig.align="center"}
 # ==============================================================================
 # Full Metropolitan Spatial Prediction Map
 # ==============================================================================
@@ -666,7 +680,7 @@ The "Transit Desert" of Omaha resides in Mid-City along the Center Street Corrid
 
 For regional decision makers, this map indicates that transit funding should target the high need corridors, such as around 72nd and Center Streets, where actual car ownership exceed expectations. 
 
-```{r PDP-GRD, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on gross residential density (housing units/acre), identifying a key tipping point between 4 and 7.5 units per acre."}
+```{r PDP-GRD, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on gross residential density (housing units/acre), identifying a key tipping point between 4 and 7.5 units per acre.", out.width="80%", fig.align="center"}
 # ==============================================================================
 # Helper Function & Generation of Diagnostic Partial Dependence Plots (PDP)
 # Random Forest Model Engine
@@ -717,7 +731,7 @@ This range corresponds to middle-density neighborhoods such as multi-family town
 
 For regional planners, these finding provide a policy target for housing strategy. Rather than requiring high density high-rises to curtail automobile reliance, local municipalities can achieve significant reductions in auto dependency by enabling middle housing density at around 8 units per acre. By reforming restrictive single-family zoning codes and incentivizing moderate density developments, city planners in Omaha and Council Bluffs can actively lower the compulsory burden of car ownership, offering households genuine transportation flexibility while expanding regional housing supply.   
 
-```{r PDP-transit, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on distance to nearest transit stop (meters), identifying a key tipping point between 400 and 800 meters."}
+```{r PDP-transit, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on distance to nearest transit stop (meters), identifying a key tipping point between 400 and 800 meters.", out.width="80%", fig.align="center"}
 # ------------------------------------------------------------------------------
 # 2. PDP: Transit Stop Proximity (D4A) - [Second Top Predictor]
 # ------------------------------------------------------------------------------
@@ -1073,8 +1087,16 @@ Statistical analysis of the differences between Omaha and Council Bluffs demonst
 
 # Final Project Outline
 
-"Be very specific"
-Include both how and why
+The analyses and results of this Draft Project have opened up a path for more discovery and tool creation. The following is an outline of a plan to move the study further:
+
+- While several maps were created to illustrate important features regarding the transit gap in the Metro area, each colored area contains more information than the static plot shows. Creating a Shiny Dashboard to allow a user to hover over each area will allow them to gain greater insight into the results of our investigation.
+
+- A 3 mile long street car is being constructed in Omaha's metro core along Harney and Farnam Steets. This is one of the primary investments in transportation currently ongoing in the city. While it is meant for economic development, we can expand our analysis by profiling the census block located along the proposed path of the car, then compare this area to other blocks in our dataset to see if transportation investment is relieving any existing transportation inequity
+
+- Micromobility in the form of bikeshare hubs and electric scooter stations have become popular in cities to aid in transportation. Based on the findings we have already, we can investigate whether these stations are providing any relief to transit desert areas identified. We can find these hubs using Douglas county GIS and create a radius around this infrastructure to determine which blocks are benefiting from expanding micromobility investment. This would allow us to see if this is helping to relieve transportation inequality.
+
+- Our research highlights how limited transportation alternatives can increase reliance on private vehicles. We can expand this by combining neighborhood income data with estimated vehicle ownership and public transit costs to examine the potential financial burden of automobile dependence across different neighborhood types. This would help quantify the economic implications of the transit gap and strengthen our urban equity recommendations.
+
 
 # Code Availability
 

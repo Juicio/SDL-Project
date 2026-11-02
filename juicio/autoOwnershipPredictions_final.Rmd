@@ -292,7 +292,7 @@ In order to analyze the underlying drivers of household vehicle ownership, featu
 
 In the Omaha-Council Bluffs area, sprawling land-use patterns have historically made personal vehicles the primary, if not sole, pathway to regional opportunity. By modeling expected household vehicle counts as a function of walkability, density, street connectivity, and transit proximity, this analysis establishes a quantitative baseline for what a neighborhood's auto reliance should look like based on its physical and economic characteristics.
 
-```{r ownership-drivers, echo=FALSE, fig.cap="Feature importance scores based on Gini impurity reduction, highlighting the primary drivers of predicted household vehicle ownership."}
+```{r ownership-drivers, echo=FALSE, fig.cap="Feature importance scores based on Gini impurity reduction, highlighting the primary drivers of predicted household vehicle ownership.", out.width="80%", fig.align="center"}
 # ==============================================================================
 # Final Model Evaluation & Variable Importance
 # ==============================================================================
@@ -369,7 +369,7 @@ Pedestrian network connectivity and destination land-use form a second tier of p
 
 Rather than treating auto ownership as a consumer choice driven by income, the model demonstrates that housing density and transit proximity are the key drivers governing regional mobility. By strategically aligning these two features, the local municipalities can lower the forced economic burden of household vehicle ownership and advance urban equity.
 
-```{r spatial-map-ownership, echo=FALSE, fig.cap="Spatial mapping of the Car Ownership Gap across the Omaha-Council Bluffs metropolitan region, identifying mismatches between predicted and actual household vehicle reliance."}
+```{r spatial-map-ownership, echo=FALSE, fig.cap="Spatial mapping of the Car Ownership Gap across the Omaha-Council Bluffs metropolitan region, identifying mismatches between predicted and actual household vehicle reliance.", out.width="80%", fig.align="center"}
 # ==============================================================================
 # Full Metropolitan Spatial Prediction Map
 # ==============================================================================
@@ -436,7 +436,7 @@ The "Transit Desert" of Omaha resides in Mid-City along the Center Street Corrid
 
 For regional decision makers, this map indicates that transit funding should target the high need corridors, such as around 72nd and Center Streets, where actual car ownership exceed expectations. 
 
-```{r PDP-GRD, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on gross residential density (housing units/acre), identifying a key tipping point between 4 and 7.5 units per acre."}
+```{r PDP-GRD, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on gross residential density (housing units/acre), identifying a key tipping point between 4 and 7.5 units per acre.", out.width="80%", fig.align="center"}
 # ==============================================================================
 # Helper Function & Generation of Diagnostic Partial Dependence Plots (PDP)
 # Random Forest Model Engine
@@ -487,7 +487,7 @@ This range corresponds to middle-density neighborhoods such as multi-family town
 
 For regional planners, these finding provide a policy target for housing strategy. Rather than requiring high density high-rises to curtail automobile reliance, local municipalities can achieve significant reductions in auto dependency by enabling middle housing density at around 8 units per acre. By reforming restrictive single-family zoning codes and incentivizing moderate density developments, city planners in Omaha and Council Bluffs can actively lower the compulsory burden of car ownership, offering households genuine transportation flexibility while expanding regional housing supply.   
 
-```{r PDP-transit, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on distance to nearest transit stop (meters), identifying a key tipping point between 400 and 800 meters."}
+```{r PDP-transit, echo=FALSE, fig.cap="Partial dependence of predicted average vehicles per household on distance to nearest transit stop (meters), identifying a key tipping point between 400 and 800 meters.", out.width="80%", fig.align="center"}
 # ------------------------------------------------------------------------------
 # 2. PDP: Transit Stop Proximity (D4A) - [Second Top Predictor]
 # ------------------------------------------------------------------------------
