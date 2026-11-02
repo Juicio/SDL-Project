@@ -269,7 +269,6 @@ performance_table <- model_performance %>%
 # Basic kable call with caption attached
 knitr::kable(
   performance_table,
-  caption = "The final evaluation metrics of the three trained models.",
   align = c("l", "c", "c", "c")
 )
 ```
